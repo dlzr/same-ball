@@ -1,0 +1,13 @@
+- group neighboring balls by color
+- rotate hovered ball group
+- animate ball group disappearance
+- animate fall in same column
+- animate collapse of empty columns
+- support resizing board
+- handle different board sizes: small/medium/large
+- handle different number of colors
+- implement help/about
+- implement game/high scores
+- implement scoring
+- implement game-over screen/dialog
+- display status in status bar
