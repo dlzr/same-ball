@@ -26,21 +26,27 @@ def generate_game_seed():
 
 class Ball(pygame.sprite.Sprite):
 
+    IMAGES = []
     COLORS = []
     SIZE = 64
 
     @staticmethod
     def load_images():
-        Ball.COLORS = [Ball.load_frames_from_file(f)
+        Ball.IMAGES = [pygame.image.load(f)
                        for f in ['blue.png', 'green.png', 'purple.png',
                                  'red.png', 'white.png', 'yellow.png']]
 
     @staticmethod
-    def load_frames_from_file(filename):
-        film = pygame.image.load(filename)
+    def init(ball_size):
+        Ball.SIZE = ball_size
+        Ball.COLORS = [Ball.split_frames(film) for film in Ball.IMAGES]
+
+    @staticmethod
+    def split_frames(film):
         if film.get_height() > film.get_width():
             raise ValueError('Ball sprites should have a sequence of frames '
                              'laid out horizontally next to each other')
+
         frames = []
         size = film.get_height()
         num_frames = film.get_width() // size
@@ -62,16 +68,21 @@ class Ball(pygame.sprite.Sprite):
 
 class Board(object):
     
-    def __init__(self, num_columns, num_rows, game_seed=''):
+    def __init__(self, surface, num_columns, num_rows, game_seed=''):
+        self.surface = surface
+
         self.game_seed = game_seed or generate_game_seed()
         random.seed(base64.b32decode(self.game_seed, casefold=True))
+
+        Ball.init(min(self.surface.get_width() // num_columns,
+                      self.surface.get_height() // num_rows))
 
         self.all_balls = pygame.sprite.RenderUpdates()
         self.balls = [[Ball(c, r, self.all_balls) for r in range(num_rows)]
                        for c in range(num_columns)]
 
-    def draw(self, surface):
-        return self.all_balls.draw(surface)
+    def draw(self):
+        return self.all_balls.draw(self.surface)
 
 
 class SameBallApp(object):
@@ -79,7 +90,7 @@ class SameBallApp(object):
     def __init__(self):
         self.init_ui()
         self.load_images()
-        self.board = Board(15, 10)
+        self.board = Board(self.screen, 10, 7)
 
     def init_ui(self):
         self.builder = Gtk.Builder()
@@ -117,7 +128,7 @@ class SameBallApp(object):
         Gtk.main()
 
     def update(self):
-        pygame.display.update(self.board.draw(self.screen))
+        pygame.display.update(self.board.draw())
         return True
 
     def on_mouse_move(self, widget, event=None):
