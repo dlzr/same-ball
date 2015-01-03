@@ -16,7 +16,7 @@ import re
 import time
 
 
-FPS = 30
+FPS = 10
 FRAME_DURATION_MS = int(1000 / FPS)
 
 
@@ -29,6 +29,11 @@ class Ball(pygame.sprite.Sprite):
     IMAGES = []
     COLORS = []
     SIZE = 64
+
+    STATE_IDLE = 0
+    STATE_SPINNING = 1
+    STATE_DROP = 2
+    STATE_VANISH = 3
 
     @staticmethod
     def load_images():
@@ -57,32 +62,96 @@ class Ball(pygame.sprite.Sprite):
                                                        (Ball.SIZE, Ball.SIZE)))
         return frames
 
-    def __init__(self, col, row, group):
+    def __init__(self, x, y, group):
         super(Ball, self).__init__(group)
         self.color = random.choice(Ball.COLORS)
         self.frame_idx = random.randrange(len(self.color))
         self.image = self.color[self.frame_idx]
-        self.rect = pygame.Rect(col * Ball.SIZE, row * Ball.SIZE,
-                                Ball.SIZE, Ball.SIZE)
+        self.rect = pygame.Rect(x, y, Ball.SIZE, Ball.SIZE)
+        self.cluster = pygame.sprite.RenderUpdates(self)
+        self.state = Ball.STATE_IDLE
+
+    def start_spinning(self):
+        self.state = Ball.STATE_SPINNING
+
+    def stop_spinning(self):
+        self.state = Ball.STATE_IDLE
+
+    def update(self):
+        if self.state == Ball.STATE_SPINNING:
+            self.frame_idx = (self.frame_idx + 1) % len(self.color)
+            self.image = self.color[self.frame_idx]
 
 
 class Board(object):
     
     def __init__(self, surface, num_columns, num_rows, game_seed=''):
         self.surface = surface
+        self.num_columns = num_columns
+        self.num_rows = num_rows
 
         self.game_seed = game_seed or generate_game_seed()
         random.seed(base64.b32decode(self.game_seed, casefold=True))
 
-        Ball.init(min(self.surface.get_width() // num_columns,
-                      self.surface.get_height() // num_rows))
+        ball_size = min(self.surface.get_width() // num_columns,
+                        self.surface.get_height() // num_rows) 
+        self.padding_x = (self.surface.get_width() - ball_size*num_columns) // 2
+        self.padding_y = (self.surface.get_height() - ball_size*num_rows) // 2
+        Ball.init(ball_size)
 
         self.all_balls = pygame.sprite.RenderUpdates()
-        self.balls = [[Ball(c, r, self.all_balls) for r in range(num_rows)]
-                       for c in range(num_columns)]
+        self.balls = [[Ball(self.padding_x + col * Ball.SIZE,
+                            self.padding_y + row * Ball.SIZE, self.all_balls)
+                       for row in range(num_rows)]
+                      for col in range(num_columns)]
+        self.cluster_balls()
+
+        self.spinning_cluster = None
+
+    def update(self):
+        self.all_balls.update()
 
     def draw(self):
         return self.all_balls.draw(self.surface)
+
+    def cluster_balls(self):
+        def cluster(ball1, ball2):
+            if ball1 is None or ball2 is None:
+                return
+            if ball1.color == ball2.color and ball1.cluster != ball2.cluster:
+                ball1.cluster.add(*ball2.cluster.sprites())
+                old_cluster = ball2.cluster
+                for ball in old_cluster.sprites():
+                    ball.cluster = ball1.cluster
+                old_cluster.empty()
+
+        for col in range(self.num_columns - 1):
+            for row in range(self.num_rows):
+                cluster(self.balls[col][row], self.balls[col+1][row])
+
+        for col in range(self.num_columns):
+            for row in range(self.num_rows - 1):
+                cluster(self.balls[col][row], self.balls[col][row+1])
+
+    def ball_at(self, x, y):
+        col = int((x - self.padding_x) / Ball.SIZE)
+        row = int((y - self.padding_y) / Ball.SIZE)
+        if col < 0 or col >= self.num_columns or row < 0 or row >= self.num_rows:
+            return None
+        return self.balls[col][row]
+
+    def start_spinning_cluster(self, cluster):
+        self.spinning_cluster = cluster
+        for ball in cluster.sprites():
+            ball.start_spinning()
+
+    def stop_spinning_cluster(self):
+        if not self.spinning_cluster:
+            return
+
+        for ball in self.spinning_cluster:
+            ball.stop_spinning()
+        self.spinning_cluster = None
 
 
 class SameBallApp(object):
@@ -128,12 +197,19 @@ class SameBallApp(object):
         Gtk.main()
 
     def update(self):
+        self.board.update()
         pygame.display.update(self.board.draw())
         return True
 
     def on_mouse_move(self, widget, event=None):
-#        print "Mouse at: ({}, {})".format(event.x, event.y)
-        pass
+        ball = self.board.ball_at(event.x, event.y)
+        if not ball:
+            self.board.stop_spinning_cluster()
+        if ball.state == Ball.STATE_SPINNING:
+            return
+        self.board.stop_spinning_cluster()
+        if len(ball.cluster) > 1:
+            self.board.start_spinning_cluster(ball.cluster)
 
     def on_mouse_click(self, widget, event=None):
         print "Mouse clicked at: ({}, {})".format(event.x, event.y)
