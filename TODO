@@ -1,4 +1,3 @@
-- animate ball group disappearance
 - animate fall in same column
 - animate collapse of empty columns
 - support resizing board
@@ -10,3 +9,7 @@
 - implement game-over screen/dialog
 - support loading specific game (game/load)
 - display status in status bar
+- listen for window partial/full obscure/reveal events and redraw the entire screen
+  - currently, black boxes appear in the areas without balls, since they don't get redrawn
+______________________
+vim: set sw=2 sts=2 et

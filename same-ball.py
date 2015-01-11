@@ -16,7 +16,7 @@ import re
 import time
 
 
-FPS = 10
+FPS = 30
 FRAME_DURATION_MS = int(1000 / FPS)
 
 
@@ -30,10 +30,15 @@ class Ball(pygame.sprite.Sprite):
     COLORS = []
     SIZE = 64
 
+    STATE_GONE = -1
     STATE_IDLE = 0
     STATE_SPINNING = 1
     STATE_DROP = 2
     STATE_VANISH = 3
+
+    Z_VIEWER = 5  # Cells.
+    VANISH_ACCEL = 500  # Cells / s^2.
+    NUM_VANISH_FRAMES = int(0.250 * FPS)
 
     @staticmethod
     def load_images():
@@ -62,12 +67,15 @@ class Ball(pygame.sprite.Sprite):
                                                        (Ball.SIZE, Ball.SIZE)))
         return frames
 
-    def __init__(self, x, y, group):
+    def __init__(self, board, col, row, group):
         super(Ball, self).__init__(group)
+        self.board = board
+        self.col = col
+        self.row = row
         self.color = random.choice(Ball.COLORS)
         self.frame_idx = random.randrange(len(self.color))
         self.image = self.color[self.frame_idx]
-        self.rect = pygame.Rect(x, y, Ball.SIZE, Ball.SIZE)
+        self.rect = self.board.rect(col, row, 1, 1)
         self.cluster = pygame.sprite.RenderUpdates(self)
         self.state = Ball.STATE_IDLE
 
@@ -77,14 +85,41 @@ class Ball(pygame.sprite.Sprite):
     def stop_spinning(self):
         self.state = Ball.STATE_IDLE
 
+    def vanish(self):
+        self.state = Ball.STATE_VANISH
+        self.vanish_frame = 0
+
+    def get_vanish_size(self):
+        return (Ball.Z_VIEWER /
+                (Ball.Z_VIEWER + Ball.VANISH_ACCEL * ((self.vanish_frame * FRAME_DURATION_MS / 1000)**2)))
+
     def update(self):
-        if self.state == Ball.STATE_SPINNING:
+        if self.state == Ball.STATE_GONE:
+            return
+
+        elif self.state == Ball.STATE_SPINNING:
             self.frame_idx = (self.frame_idx + 1) % len(self.color)
             self.image = self.color[self.frame_idx]
 
+        elif self.state == Ball.STATE_VANISH:
+            if self.vanish_frame >= Ball.NUM_VANISH_FRAMES:
+                self.board.remove_ball(self)
+                self.state = Ball.STATE_GONE
+                return
+
+            self.frame_idx = (self.frame_idx + 1) % len(self.color)
+            size = self.get_vanish_size()
+            self.image = pygame.transform.scale(self.color[self.frame_idx],
+                                                (int(size * Ball.SIZE),
+                                                 int(size * Ball.SIZE)))
+            self.rect = self.board.rect(self.col + 0.5 - size / 2,
+                                        self.row + 0.5 - size / 2,
+                                        size, size)
+            self.vanish_frame += 1
+
 
 class Board(object):
-    
+
     def __init__(self, surface, num_columns, num_rows, game_seed=''):
         self.surface = surface
         self.num_columns = num_columns
@@ -94,24 +129,32 @@ class Board(object):
         random.seed(base64.b32decode(self.game_seed, casefold=True))
 
         ball_size = min(self.surface.get_width() // num_columns,
-                        self.surface.get_height() // num_rows) 
+                        self.surface.get_height() // num_rows)
         self.padding_x = (self.surface.get_width() - ball_size*num_columns) // 2
         self.padding_y = (self.surface.get_height() - ball_size*num_rows) // 2
         Ball.init(ball_size)
 
         self.all_balls = pygame.sprite.RenderUpdates()
-        self.balls = [[Ball(self.padding_x + col * Ball.SIZE,
-                            self.padding_y + row * Ball.SIZE, self.all_balls)
+        self.balls = [[Ball(self, col, row, self.all_balls)
                        for row in range(num_rows)]
                       for col in range(num_columns)]
         self.cluster_balls()
 
         self.spinning_cluster = None
+        self.vanishing_cluster = None
+
+    def rect(self, col, row, width, height):
+        """col, row, width and height are all in cells."""
+        return pygame.Rect(int(self.padding_x + col * Ball.SIZE),
+                           int(self.padding_y + row * Ball.SIZE),
+                           int(width * Ball.SIZE),
+                           int(height * Ball.SIZE))
 
     def update(self):
         self.all_balls.update()
 
     def draw(self):
+        self.surface.fill((32, 32, 38))
         return self.all_balls.draw(self.surface)
 
     def cluster_balls(self):
@@ -153,6 +196,27 @@ class Board(object):
             ball.stop_spinning()
         self.spinning_cluster = None
 
+    def kill_spinning_cluster(self):
+        if not self.spinning_cluster:
+            raise RuntimeError("Board.kill_spinning_cluster() called unexpectedly.")
+
+        self.vanishing_cluster = self.spinning_cluster
+        self.spinning_cluster = None
+
+        for ball in self.vanishing_cluster:
+            self.balls[ball.col][ball.row] = None
+            ball.vanish()
+
+    def remove_ball(self, ball):
+        if ball.state != Ball.STATE_VANISH:
+            raise RuntimeError("Board.remove_ball() called unexpectedly.")
+
+        self.all_balls.remove(ball)
+        self.vanishing_cluster.remove(ball)
+        if not self.vanishing_cluster:
+            self.vanishing_cluster = None
+
+
 
 class SameBallApp(object):
 
@@ -177,7 +241,7 @@ class SameBallApp(object):
 
         pygame.init()
         pygame.display.set_mode((self.game_area.get_allocated_width(),
-                                 self.game_area.get_allocated_height()), 
+                                 self.game_area.get_allocated_height()),
                                  pygame.DOUBLEBUF, 0)
         self.screen = pygame.display.get_surface()
 
@@ -205,6 +269,7 @@ class SameBallApp(object):
         ball = self.board.ball_at(event.x, event.y)
         if not ball:
             self.board.stop_spinning_cluster()
+            return
         if ball.state == Ball.STATE_SPINNING:
             return
         self.board.stop_spinning_cluster()
@@ -212,7 +277,11 @@ class SameBallApp(object):
             self.board.start_spinning_cluster(ball.cluster)
 
     def on_mouse_click(self, widget, event=None):
-        print "Mouse clicked at: ({}, {})".format(event.x, event.y)
+        ball = self.board.ball_at(event.x, event.y)
+        if not ball:
+            return
+        if ball.state == Ball.STATE_SPINNING:
+            self.board.kill_spinning_cluster()
 
     def on_resize(self, widget, event=None):
         pygame.display.set_mode((self.game_area.get_allocated_width(),
