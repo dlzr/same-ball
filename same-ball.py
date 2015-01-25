@@ -38,7 +38,7 @@ class Ball(pygame.sprite.Sprite):
 
     Z_VIEWER = 5  # Cells.
     VANISH_ACCEL = 500  # Cells / s^2.
-    NUM_VANISH_FRAMES = int(0.250 * FPS)
+    VANISH_DURATION_S = 0.250
 
     @staticmethod
     def load_images():
@@ -87,13 +87,13 @@ class Ball(pygame.sprite.Sprite):
 
     def vanish(self):
         self.state = Ball.STATE_VANISH
-        self.vanish_frame = 0
+        self.vanish_t = time.time()
 
-    def get_vanish_size(self):
+    def get_vanish_size(self, t):
         return (Ball.Z_VIEWER /
-                (Ball.Z_VIEWER + Ball.VANISH_ACCEL * ((self.vanish_frame * FRAME_DURATION_MS / 1000)**2)))
+                (Ball.Z_VIEWER + Ball.VANISH_ACCEL * ((t - self.vanish_t)**2)))
 
-    def update(self):
+    def update(self, t):
         if self.state == Ball.STATE_GONE:
             return
 
@@ -102,20 +102,19 @@ class Ball(pygame.sprite.Sprite):
             self.image = self.color[self.frame_idx]
 
         elif self.state == Ball.STATE_VANISH:
-            if self.vanish_frame >= Ball.NUM_VANISH_FRAMES:
+            if (t - self.vanish_t) >= Ball.VANISH_DURATION_S:
                 self.board.remove_ball(self)
                 self.state = Ball.STATE_GONE
                 return
 
             self.frame_idx = (self.frame_idx + 1) % len(self.color)
-            size = self.get_vanish_size()
+            size = self.get_vanish_size(t)
             self.image = pygame.transform.scale(self.color[self.frame_idx],
                                                 (int(size * Ball.SIZE),
                                                  int(size * Ball.SIZE)))
             self.rect = self.board.rect(self.col + 0.5 - size / 2,
                                         self.row + 0.5 - size / 2,
                                         size, size)
-            self.vanish_frame += 1
 
 
 class Board(object):
@@ -150,8 +149,8 @@ class Board(object):
                            int(width * Ball.SIZE),
                            int(height * Ball.SIZE))
 
-    def update(self):
-        self.all_balls.update()
+    def update(self, t):
+        self.all_balls.update(t)
 
     def draw(self):
         self.surface.fill((32, 32, 38))
@@ -261,7 +260,7 @@ class SameBallApp(object):
         Gtk.main()
 
     def update(self):
-        self.board.update()
+        self.board.update(time.time())
         pygame.display.update(self.board.draw())
         return True
 
