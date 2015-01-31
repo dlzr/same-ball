@@ -36,6 +36,8 @@ class Ball(pygame.sprite.Sprite):
     STATE_DROP = 2
     STATE_VANISH = 3
 
+    SPIN_DURATION_S = 2.0
+
     Z_VIEWER = 5  # Cells.
     VANISH_ACCEL = 500  # Cells / s^2.
     VANISH_DURATION_S = 0.250
@@ -73,45 +75,55 @@ class Ball(pygame.sprite.Sprite):
         self.col = col
         self.row = row
         self.color = random.choice(Ball.COLORS)
-        self.frame_idx = random.randrange(len(self.color))
-        self.image = self.color[self.frame_idx]
+        self.rotation = random.random()
+        self.spin_t = board.t
+        self.image = self.get_image()
         self.rect = self.board.rect(col, row, 1, 1)
         self.cluster = pygame.sprite.RenderUpdates(self)
         self.state = Ball.STATE_IDLE
 
+    def get_rotation(self):
+        return (self.rotation +
+                ((self.board.t - self.spin_t) % Ball.SPIN_DURATION_S) /
+                Ball.SPIN_DURATION_S) % 1.0
+
+    def get_image(self):
+        return self.color[int(self.get_rotation() * len(self.color))]
+
+    def get_vanish_size(self):
+        return (Ball.Z_VIEWER /
+                (Ball.Z_VIEWER +
+                 Ball.VANISH_ACCEL * ((self.board.t - self.vanish_t)**2)))
+
     def start_spinning(self):
         self.state = Ball.STATE_SPINNING
+        self.spin_t = self.board.t
 
     def stop_spinning(self):
         self.state = Ball.STATE_IDLE
+        self.rotation = self.get_rotation()
 
     def vanish(self):
         self.state = Ball.STATE_VANISH
-        self.vanish_t = time.time()
+        self.vanish_t = self.board.t
 
-    def get_vanish_size(self, t):
-        return (Ball.Z_VIEWER /
-                (Ball.Z_VIEWER + Ball.VANISH_ACCEL * ((t - self.vanish_t)**2)))
-
-    def update(self, t):
+    def update(self):
         if self.state == Ball.STATE_GONE:
             return
 
         elif self.state == Ball.STATE_SPINNING:
-            self.frame_idx = (self.frame_idx + 1) % len(self.color)
-            self.image = self.color[self.frame_idx]
+            self.image = self.get_image()
 
         elif self.state == Ball.STATE_VANISH:
-            if (t - self.vanish_t) >= Ball.VANISH_DURATION_S:
+            if (self.board.t - self.vanish_t) >= Ball.VANISH_DURATION_S:
                 self.board.remove_ball(self)
                 self.state = Ball.STATE_GONE
                 return
 
-            self.frame_idx = (self.frame_idx + 1) % len(self.color)
-            size = self.get_vanish_size(t)
-            self.image = pygame.transform.scale(self.color[self.frame_idx],
-                                                (int(size * Ball.SIZE),
-                                                 int(size * Ball.SIZE)))
+            image = self.get_image()
+            size = self.get_vanish_size()
+            self.image = pygame.transform.scale(
+                    image, (int(size * Ball.SIZE), int(size * Ball.SIZE)))
             self.rect = self.board.rect(self.col + 0.5 - size / 2,
                                         self.row + 0.5 - size / 2,
                                         size, size)
@@ -133,6 +145,7 @@ class Board(object):
         self.padding_y = (self.surface.get_height() - ball_size*num_rows) // 2
         Ball.init(ball_size)
 
+        self.t = time.time()
         self.all_balls = pygame.sprite.RenderUpdates()
         self.balls = [[Ball(self, col, row, self.all_balls)
                        for row in range(num_rows)]
@@ -149,8 +162,9 @@ class Board(object):
                            int(width * Ball.SIZE),
                            int(height * Ball.SIZE))
 
-    def update(self, t):
-        self.all_balls.update(t)
+    def update(self):
+        self.t = time.time()
+        self.all_balls.update()
 
     def draw(self):
         self.surface.fill((32, 32, 38))
@@ -260,7 +274,7 @@ class SameBallApp(object):
         Gtk.main()
 
     def update(self):
-        self.board.update(time.time())
+        self.board.update()
         pygame.display.update(self.board.draw())
         return True
 
