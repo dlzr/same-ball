@@ -52,7 +52,12 @@ class Ball(pygame.sprite.Sprite):
                                  'red.png', 'white.png', 'yellow.png']]
 
     @staticmethod
-    def init(ball_size):
+    def init(num_colors):
+        random.shuffle(Ball.IMAGES)
+        Ball.NUM_COLORS = min(num_colors, len(Ball.IMAGES))
+
+    @staticmethod
+    def resize_images(ball_size):
         Ball.SIZE = ball_size
         Ball.COLORS = [Ball.split_frames(film) for film in Ball.IMAGES]
 
@@ -79,7 +84,7 @@ class Ball(pygame.sprite.Sprite):
         self.row = row
         self.drop_col = col
         self.drop_row = row
-        self.color = random.randrange(len(Ball.COLORS))
+        self.color = random.randrange(Ball.NUM_COLORS)
         self.rotation = random.random()
         self.spin_t = board.t
         self.state = Ball.STATE_IDLE
@@ -172,7 +177,7 @@ class Ball(pygame.sprite.Sprite):
 
 class Board(object):
 
-    def __init__(self, surface, num_columns, num_rows, game_seed=''):
+    def __init__(self, surface, num_colors, num_columns, num_rows, game_seed=''):
         self.surface = surface
         self.num_columns = num_columns
         self.num_rows = num_rows
@@ -180,6 +185,7 @@ class Board(object):
         self.game_seed = game_seed or generate_game_seed()
         random.seed(base64.b32decode(self.game_seed, casefold=True))
 
+        Ball.init(num_colors)
         self.all_balls = pygame.sprite.RenderUpdates()
         self.resize()
 
@@ -214,7 +220,7 @@ class Board(object):
                         self.surface.get_height() // self.num_rows)
         self.padding_x = (self.surface.get_width() - ball_size*self.num_columns) // 2
         self.padding_y = (self.surface.get_height() - ball_size*self.num_rows) // 2
-        Ball.init(ball_size)
+        Ball.resize_images(ball_size)
 
         for ball in self.all_balls.sprites():
             ball.resize()
@@ -344,6 +350,7 @@ class SameBallApp(object):
     def __init__(self):
         self.init_ui()
         Ball.load_images()
+        self.num_colors = 4
         self.on_game_new()
 
     def init_ui(self):
@@ -440,7 +447,23 @@ class SameBallApp(object):
         Gtk.main_quit()
 
     def on_game_new(self, widget=None, data=None):
-        self.board = Board(self.screen, 10, 7)
+        self.board = Board(self.screen, self.num_colors, 10, 7)
+
+    def on_game_difficulty(self, widget, data=None):
+        if not widget.get_active():
+            return
+
+        name = Gtk.Buildable.get_name(widget)
+        if name == 'colors3_menu_item':
+            self.num_colors = 3
+        elif name == 'colors4_menu_item':
+            self.num_colors = 4
+        elif name == 'colors5_menu_item':
+            self.num_colors = 5
+        elif name == 'colors6_menu_item':
+            self.num_colors = 6
+
+        self.on_game_new()
 
 
 if __name__ == '__main__':

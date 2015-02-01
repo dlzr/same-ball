@@ -1,5 +1,4 @@
 - handle different board sizes: small/medium/large
-- handle different number of colors
 - implement help/about
 - implement game/high scores
 - implement scoring
