@@ -368,11 +368,11 @@ class SameBallApp(object):
 
         self.resize_cb = None
 
-        self.game_area.connect('configure-event', self.on_resize)
         window = self.game_area.get_window()
         window.set_events(window.get_events() |
                           Gdk.EventMask.POINTER_MOTION_MASK |
                           Gdk.EventMask.BUTTON_PRESS_MASK)
+        self.game_area.connect('configure-event', self.on_resize)
         self.game_area.connect('motion-notify-event', self.on_mouse_move)
         self.game_area.connect('button-press-event', self.on_mouse_click)
 
@@ -382,13 +382,15 @@ class SameBallApp(object):
 
     def update(self):
         self.board.update()
-        if self.resize_cb:
-            # Force full-display updates during resizes.
-            self.board.draw()
-            pygame.display.update()
-        else:
-            pygame.display.update(self.board.draw())
+        # TODO(dlazar): Investigate if it's worth using partial redraws.
+        # For now, it causes too many headaches with the window manager.
+        #pygame.display.update(self.board.draw())
+        self.redraw()
         return True
+
+    def redraw(self):
+        self.board.draw()
+        pygame.display.update()
 
     def on_mouse_move(self, widget, event=None):
         if self.board.block_events:
@@ -424,8 +426,7 @@ class SameBallApp(object):
         pygame.display.set_mode((self.game_area.get_allocated_width(),
                                  self.game_area.get_allocated_height()), 0, 0)
         self.board.resize()
-        self.board.draw()
-        pygame.display.update()
+        self.redraw()
 
         self.resize_cb = None
         return False
