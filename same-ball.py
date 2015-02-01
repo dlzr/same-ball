@@ -32,15 +32,18 @@ class Ball(pygame.sprite.Sprite):
 
     STATE_GONE = -1
     STATE_IDLE = 0
-    STATE_SPINNING = 1
+    STATE_SPIN = 1
     STATE_DROP = 2
     STATE_VANISH = 3
 
     SPIN_DURATION_S = 2.0
 
-    Z_VIEWER = 5  # Cells.
-    VANISH_ACCEL = 500  # Cells / s^2.
     VANISH_DURATION_S = 0.250
+    VANISH_ACCEL = 500  # Cells / s^2.
+    Z_VIEWER = 5  # Cells.
+
+    DROP_ACCEL_COL = 10
+    DROP_ACCEL_ROW = 10
 
     @staticmethod
     def load_images():
@@ -74,44 +77,69 @@ class Ball(pygame.sprite.Sprite):
         self.board = board
         self.col = col
         self.row = row
+        self.drop_col = col
+        self.drop_row = row
         self.color = random.choice(Ball.COLORS)
         self.rotation = random.random()
         self.spin_t = board.t
         self.image = self.get_image()
         self.rect = self.board.rect(col, row, 1, 1)
-        self.cluster = pygame.sprite.RenderUpdates(self)
         self.state = Ball.STATE_IDLE
-
-    def get_rotation(self):
-        return (self.rotation +
-                ((self.board.t - self.spin_t) % Ball.SPIN_DURATION_S) /
-                Ball.SPIN_DURATION_S) % 1.0
+        self.cluster = None
 
     def get_image(self):
         return self.color[int(self.get_rotation() * len(self.color))]
 
-    def get_vanish_size(self):
-        return (Ball.Z_VIEWER /
-                (Ball.Z_VIEWER +
-                 Ball.VANISH_ACCEL * ((self.board.t - self.vanish_t)**2)))
-
     def start_spinning(self):
-        self.state = Ball.STATE_SPINNING
+        self.state = Ball.STATE_SPIN
         self.spin_t = self.board.t
 
     def stop_spinning(self):
         self.state = Ball.STATE_IDLE
         self.rotation = self.get_rotation()
 
+    def get_rotation(self):
+        return (self.rotation +
+                ((self.board.t - self.spin_t) % Ball.SPIN_DURATION_S) /
+                Ball.SPIN_DURATION_S) % 1.0
+
     def vanish(self):
         self.state = Ball.STATE_VANISH
         self.vanish_t = self.board.t
+
+    def get_vanish_size(self):
+        return (Ball.Z_VIEWER /
+                (Ball.Z_VIEWER +
+                 Ball.VANISH_ACCEL * (self.board.t - self.vanish_t)**2))
+
+    def drop_vertically(self, num_rows):
+        self.state = Ball.STATE_DROP
+        self.drop_t = self.board.t
+        self.drop_row += num_rows
+
+    def drop_horizontally(self, num_cols):
+        self.state = Ball.STATE_DROP
+        self.drop_t = self.board.t
+        self.drop_col -= num_cols
+
+    def stop_dropping(self):
+        self.state = Ball.STATE_IDLE
+        self.col = self.drop_col
+        self.row = self.drop_row
+        self.board.stop_dropping_ball(self)
+
+    def get_drop_position(self):
+        col = self.col - Ball.DROP_ACCEL_COL * (self.board.t - self.drop_t)**2
+        col = max(col, self.drop_col)
+        row = self.row + Ball.DROP_ACCEL_ROW * (self.board.t - self.drop_t)**2
+        row = min(row, self.drop_row)
+        return (col, row)
 
     def update(self):
         if self.state == Ball.STATE_GONE:
             return
 
-        elif self.state == Ball.STATE_SPINNING:
+        elif self.state == Ball.STATE_SPIN:
             self.image = self.get_image()
 
         elif self.state == Ball.STATE_VANISH:
@@ -127,6 +155,12 @@ class Ball(pygame.sprite.Sprite):
             self.rect = self.board.rect(self.col + 0.5 - size / 2,
                                         self.row + 0.5 - size / 2,
                                         size, size)
+
+        elif self.state == Ball.STATE_DROP:
+            col, row = self.get_drop_position()
+            self.rect = self.board.rect(col, row, 1, 1)
+            if (col, row) == (self.drop_col, self.drop_row):
+                self.stop_dropping()
 
 
 class Board(object):
@@ -154,6 +188,14 @@ class Board(object):
 
         self.spinning_cluster = None
         self.vanishing_cluster = None
+        self.dropping_cluster = None
+
+    def ball_at(self, x, y):
+        col = int((x - self.padding_x) / Ball.SIZE)
+        row = int((y - self.padding_y) / Ball.SIZE)
+        if col < 0 or col >= self.num_columns or row < 0 or row >= self.num_rows:
+            return None
+        return self.balls[col][row]
 
     def rect(self, col, row, width, height):
         """col, row, width and height are all in cells."""
@@ -181,6 +223,13 @@ class Board(object):
                     ball.cluster = ball1.cluster
                 old_cluster.empty()
 
+        for col_balls in self.balls:
+            for ball in col_balls:
+                if ball:
+                    if ball.cluster:
+                        ball.cluster.remove(ball)
+                    ball.cluster = pygame.sprite.RenderUpdates(ball)
+
         for col in range(self.num_columns - 1):
             for row in range(self.num_rows):
                 cluster(self.balls[col][row], self.balls[col+1][row])
@@ -188,13 +237,6 @@ class Board(object):
         for col in range(self.num_columns):
             for row in range(self.num_rows - 1):
                 cluster(self.balls[col][row], self.balls[col][row+1])
-
-    def ball_at(self, x, y):
-        col = int((x - self.padding_x) / Ball.SIZE)
-        row = int((y - self.padding_y) / Ball.SIZE)
-        if col < 0 or col >= self.num_columns or row < 0 or row >= self.num_rows:
-            return None
-        return self.balls[col][row]
 
     def start_spinning_cluster(self, cluster):
         self.spinning_cluster = cluster
@@ -228,7 +270,44 @@ class Board(object):
         self.vanishing_cluster.remove(ball)
         if not self.vanishing_cluster:
             self.vanishing_cluster = None
+            self.drop_balls()
 
+    def drop_balls(self):
+        def drop_horizontally(col, num_empty_cols):
+            for ball in self.balls[col]:
+                if ball:
+                    ball.drop_horizontally(num_empty_cols)
+                    self.dropping_cluster.add(ball)
+
+        def drop_vertically(col):
+            num_empty_rows = 0
+            for row in range(self.num_rows - 1, -1, -1):
+                ball = self.balls[col][row]
+                if ball is None:
+                    num_empty_rows += 1
+                elif num_empty_rows:
+                    ball.drop_vertically(num_empty_rows)
+                    self.dropping_cluster.add(ball)
+            return int(num_empty_rows == self.num_rows)
+
+        self.dropping_cluster = pygame.sprite.RenderUpdates()
+
+        num_empty_cols = 0
+        for col in range(self.num_columns):
+            if num_empty_cols:
+                drop_horizontally(col, num_empty_cols)
+            num_empty_cols += drop_vertically(col)
+
+        for ball in self.dropping_cluster.sprites():
+            self.balls[ball.col][ball.row] = None
+
+    def stop_dropping_ball(self, ball):
+        self.balls[ball.col][ball.row] = ball
+
+        self.dropping_cluster.remove(ball)
+        if not self.dropping_cluster:
+            self.dropping_cluster = None
+            self.cluster_balls()
 
 
 class SameBallApp(object):
@@ -283,7 +362,7 @@ class SameBallApp(object):
         if not ball:
             self.board.stop_spinning_cluster()
             return
-        if ball.state == Ball.STATE_SPINNING:
+        if ball.state == Ball.STATE_SPIN:
             return
         self.board.stop_spinning_cluster()
         if len(ball.cluster) > 1:
@@ -293,7 +372,7 @@ class SameBallApp(object):
         ball = self.board.ball_at(event.x, event.y)
         if not ball:
             return
-        if ball.state == Ball.STATE_SPINNING:
+        if ball.state == Ball.STATE_SPIN:
             self.board.kill_spinning_cluster()
 
     def on_resize(self, widget, event=None):
