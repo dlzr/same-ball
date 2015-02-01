@@ -371,9 +371,11 @@ class SameBallApp(object):
         window = self.game_area.get_window()
         window.set_events(window.get_events() |
                           Gdk.EventMask.POINTER_MOTION_MASK |
+                          Gdk.EventMask.LEAVE_NOTIFY_MASK |
                           Gdk.EventMask.BUTTON_PRESS_MASK)
         self.game_area.connect('configure-event', self.on_resize)
         self.game_area.connect('motion-notify-event', self.on_mouse_move)
+        self.game_area.connect('leave-notify-event', self.on_mouse_leave)
         self.game_area.connect('button-press-event', self.on_mouse_click)
 
     def run(self):
@@ -405,6 +407,9 @@ class SameBallApp(object):
         self.board.stop_spinning_cluster()
         if len(ball.cluster) > 1:
             self.board.start_spinning_cluster(ball.cluster)
+
+    def on_mouse_leave(self, widget, event=None):
+        self.board.stop_spinning_cluster()
 
     def on_mouse_click(self, widget, event=None):
         if self.board.block_events:

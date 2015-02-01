@@ -6,9 +6,6 @@
 - implement game-over screen/dialog
 - support loading specific game (game/load)
 - display status in status bar
-- listen for window partial/full obscure/reveal events and redraw the entire screen
-  - currently, black boxes appear in the areas without balls, since they don't get redrawn
-- BUG: when the mouse leaves the window with a spinning cluster, the cluster keeps spinning
 - don't use CPU when nothing is going on
 
 ______________________
