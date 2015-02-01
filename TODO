@@ -1,4 +1,3 @@
-- support resizing board
 - handle different board sizes: small/medium/large
 - handle different number of colors
 - implement help/about
@@ -10,5 +9,7 @@
 - listen for window partial/full obscure/reveal events and redraw the entire screen
   - currently, black boxes appear in the areas without balls, since they don't get redrawn
 - BUG: when the mouse leaves the window with a spinning cluster, the cluster keeps spinning
+- don't use CPU when nothing is going on
+
 ______________________
 vim: set sw=2 sts=2 et

@@ -79,16 +79,21 @@ class Ball(pygame.sprite.Sprite):
         self.row = row
         self.drop_col = col
         self.drop_row = row
-        self.color = random.choice(Ball.COLORS)
+        self.color = random.randrange(len(Ball.COLORS))
         self.rotation = random.random()
         self.spin_t = board.t
-        self.image = self.get_image()
-        self.rect = self.board.rect(col, row, 1, 1)
         self.state = Ball.STATE_IDLE
         self.cluster = None
 
+        self.resize()
+
+    def resize(self):
+        self.image = self.get_image()
+        self.rect = self.board.rect(self.col, self.row, 1, 1)
+
     def get_image(self):
-        return self.color[int(self.get_rotation() * len(self.color))]
+        images = Ball.COLORS[self.color]
+        return images[int(self.get_rotation() * len(images))]
 
     def start_spinning(self):
         self.state = Ball.STATE_SPIN
@@ -99,9 +104,11 @@ class Ball(pygame.sprite.Sprite):
         self.rotation = self.get_rotation()
 
     def get_rotation(self):
-        return (self.rotation +
-                ((self.board.t - self.spin_t) % Ball.SPIN_DURATION_S) /
-                Ball.SPIN_DURATION_S) % 1.0
+        if self.state == Ball.STATE_SPIN:
+            return (self.rotation +
+                    ((self.board.t - self.spin_t) % Ball.SPIN_DURATION_S) /
+                    Ball.SPIN_DURATION_S) % 1.0
+        return self.rotation
 
     def vanish(self):
         self.state = Ball.STATE_VANISH
@@ -173,14 +180,10 @@ class Board(object):
         self.game_seed = game_seed or generate_game_seed()
         random.seed(base64.b32decode(self.game_seed, casefold=True))
 
-        ball_size = min(self.surface.get_width() // num_columns,
-                        self.surface.get_height() // num_rows)
-        self.padding_x = (self.surface.get_width() - ball_size*num_columns) // 2
-        self.padding_y = (self.surface.get_height() - ball_size*num_rows) // 2
-        Ball.init(ball_size)
+        self.all_balls = pygame.sprite.RenderUpdates()
+        self.resize()
 
         self.t = time.time()
-        self.all_balls = pygame.sprite.RenderUpdates()
         self.balls = [[Ball(self, col, row, self.all_balls)
                        for row in range(num_rows)]
                       for col in range(num_columns)]
@@ -205,6 +208,16 @@ class Board(object):
                            int(self.padding_y + row * Ball.SIZE),
                            int(width * Ball.SIZE),
                            int(height * Ball.SIZE))
+
+    def resize(self):
+        ball_size = min(self.surface.get_width() // self.num_columns,
+                        self.surface.get_height() // self.num_rows)
+        self.padding_x = (self.surface.get_width() - ball_size*self.num_columns) // 2
+        self.padding_y = (self.surface.get_height() - ball_size*self.num_rows) // 2
+        Ball.init(ball_size)
+
+        for ball in self.all_balls.sprites():
+            ball.resize()
 
     def update(self):
         self.t = time.time()
@@ -323,9 +336,14 @@ class Board(object):
 
 class SameBallApp(object):
 
+    # In order not to waste CPU resizing images while the user is manually
+    # resizing the window, we delay the actual resize until the user activity
+    # stops.
+    RESIZE_DELAY_MS = 100
+
     def __init__(self):
         self.init_ui()
-        self.load_images()
+        Ball.load_images()
         self.board = Board(self.screen, 10, 7)
 
     def init_ui(self):
@@ -348,6 +366,8 @@ class SameBallApp(object):
                                  pygame.DOUBLEBUF, 0)
         self.screen = pygame.display.get_surface()
 
+        self.resize_cb = None
+
         self.game_area.connect('configure-event', self.on_resize)
         window = self.game_area.get_window()
         window.set_events(window.get_events() |
@@ -356,16 +376,18 @@ class SameBallApp(object):
         self.game_area.connect('motion-notify-event', self.on_mouse_move)
         self.game_area.connect('button-press-event', self.on_mouse_click)
 
-    def load_images(self):
-        Ball.load_images()
-
     def run(self):
         GObject.timeout_add(FRAME_DURATION_MS, self.update)
         Gtk.main()
 
     def update(self):
         self.board.update()
-        pygame.display.update(self.board.draw())
+        if self.resize_cb:
+            # Force full-display updates during resizes.
+            self.board.draw()
+            pygame.display.update()
+        else:
+            pygame.display.update(self.board.draw())
         return True
 
     def on_mouse_move(self, widget, event=None):
@@ -393,9 +415,20 @@ class SameBallApp(object):
             self.board.kill_spinning_cluster()
 
     def on_resize(self, widget, event=None):
+        if self.resize_cb:
+            GObject.source_remove(self.resize_cb)
+        self.resize_cb = GObject.timeout_add(
+                SameBallApp.RESIZE_DELAY_MS, self.resize)
+
+    def resize(self):
         pygame.display.set_mode((self.game_area.get_allocated_width(),
                                  self.game_area.get_allocated_height()), 0, 0)
-        self.update()
+        self.board.resize()
+        self.board.draw()
+        pygame.display.update()
+
+        self.resize_cb = None
+        return False
 
     def on_quit(self, widget, data=None):
         Gtk.main_quit()
