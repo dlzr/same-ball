@@ -190,6 +190,8 @@ class Board(object):
         self.vanishing_cluster = None
         self.dropping_cluster = None
 
+        self.block_events = False
+
     def ball_at(self, x, y):
         col = int((x - self.padding_x) / Ball.SIZE)
         row = int((y - self.padding_y) / Ball.SIZE)
@@ -255,6 +257,8 @@ class Board(object):
         if not self.spinning_cluster:
             raise RuntimeError("Board.kill_spinning_cluster() called unexpectedly.")
 
+        self.block_events = True
+
         self.vanishing_cluster = self.spinning_cluster
         self.spinning_cluster = None
 
@@ -298,16 +302,23 @@ class Board(object):
                 drop_horizontally(col, num_empty_cols)
             num_empty_cols += drop_vertically(col)
 
-        for ball in self.dropping_cluster.sprites():
-            self.balls[ball.col][ball.row] = None
+        if self.dropping_cluster:
+            for ball in self.dropping_cluster.sprites():
+                self.balls[ball.col][ball.row] = None
+        else:
+            self.stop_dropping_balls()
 
     def stop_dropping_ball(self, ball):
         self.balls[ball.col][ball.row] = ball
 
         self.dropping_cluster.remove(ball)
         if not self.dropping_cluster:
-            self.dropping_cluster = None
-            self.cluster_balls()
+            self.stop_dropping_balls()
+
+    def stop_dropping_balls(self):
+        self.dropping_cluster = None
+        self.cluster_balls()
+        self.block_events = False
 
 
 class SameBallApp(object):
@@ -358,6 +369,9 @@ class SameBallApp(object):
         return True
 
     def on_mouse_move(self, widget, event=None):
+        if self.board.block_events:
+            return
+
         ball = self.board.ball_at(event.x, event.y)
         if not ball:
             self.board.stop_spinning_cluster()
@@ -369,6 +383,9 @@ class SameBallApp(object):
             self.board.start_spinning_cluster(ball.cluster)
 
     def on_mouse_click(self, widget, event=None):
+        if self.board.block_events:
+            return
+
         ball = self.board.ball_at(event.x, event.y)
         if not ball:
             return

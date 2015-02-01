@@ -1,5 +1,3 @@
-- animate fall in same column
-- animate collapse of empty columns
 - support resizing board
 - handle different board sizes: small/medium/large
 - handle different number of colors
@@ -11,5 +9,6 @@
 - display status in status bar
 - listen for window partial/full obscure/reveal events and redraw the entire screen
   - currently, black boxes appear in the areas without balls, since they don't get redrawn
+- BUG: when the mouse leaves the window with a spinning cluster, the cluster keeps spinning
 ______________________
 vim: set sw=2 sts=2 et
