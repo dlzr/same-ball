@@ -350,7 +350,11 @@ class SameBallApp(object):
     def __init__(self):
         self.init_ui()
         Ball.load_images()
+
         self.num_colors = 4
+        self.num_columns = 10
+        self.num_rows = 7
+
         self.on_game_new()
 
     def init_ui(self):
@@ -447,7 +451,24 @@ class SameBallApp(object):
         Gtk.main_quit()
 
     def on_game_new(self, widget=None, data=None):
-        self.board = Board(self.screen, self.num_colors, 10, 7)
+        self.board = Board(self.screen, self.num_colors, self.num_columns, self.num_rows)
+
+    def on_game_size(self, widget, data=None):
+        if not widget.get_active():
+            return
+
+        name = Gtk.Buildable.get_name(widget)
+        if name == 'small_menu_item':
+            self.num_columns = 6
+            self.num_rows = 5
+        elif name == 'medium_menu_item':
+            self.num_columns = 10
+            self.num_rows = 7
+        elif name == 'large_menu_item':
+            self.num_columns = 15
+            self.num_rows = 10
+
+        self.on_game_new()
 
     def on_game_difficulty(self, widget, data=None):
         if not widget.get_active():
