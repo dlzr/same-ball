@@ -100,8 +100,8 @@ class Ball(pygame.sprite.Sprite):
         self.spin_t = self.board.t
 
     def stop_spinning(self):
-        self.state = Ball.STATE_IDLE
         self.rotation = self.get_rotation()
+        self.state = Ball.STATE_IDLE
 
     def get_rotation(self):
         if self.state == Ball.STATE_SPIN:
