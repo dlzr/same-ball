@@ -344,7 +344,7 @@ class SameBallApp(object):
     def __init__(self):
         self.init_ui()
         Ball.load_images()
-        self.board = Board(self.screen, 10, 7)
+        self.on_game_new()
 
     def init_ui(self):
         self.builder = Gtk.Builder()
@@ -433,6 +433,9 @@ class SameBallApp(object):
 
     def on_quit(self, widget, data=None):
         Gtk.main_quit()
+
+    def on_game_new(self, widget=None, data=None):
+        self.board = Board(self.screen, 10, 7)
 
 
 if __name__ == '__main__':
