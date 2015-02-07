@@ -18,11 +18,16 @@ import time
 
 FPS = 30
 FRAME_DURATION_MS = int(1000 / FPS)
+BG_COLOR = Gdk.color_parse('#202026')
 
 
 def generate_game_seed():
     return base64.b32encode(hashlib.sha256(str(time.time())).digest()[:5])
 
+def to_pygame(gdk_color):
+    return (gdk_color.red / 256,
+            gdk_color.green / 256,
+            gdk_color.blue / 256)
 
 class Ball(pygame.sprite.Sprite):
 
@@ -230,7 +235,7 @@ class Board(object):
         self.all_balls.update()
 
     def draw(self):
-        self.surface.fill((32, 32, 38))
+        self.surface.fill(to_pygame(BG_COLOR))
         return self.all_balls.draw(self.surface)
 
     def cluster_balls(self):
@@ -367,6 +372,7 @@ class SameBallApp(object):
         self.window.connect('delete-event', self.on_quit)
 
         self.game_area = self.builder.get_object('game_area')
+        self.game_area.modify_bg(Gtk.StateType.NORMAL, BG_COLOR)
         self.game_area.realize()
         os.putenv('SDL_WINDOWID', str(self.game_area.get_window().get_xid()))
         Gdk.flush()
@@ -384,7 +390,8 @@ class SameBallApp(object):
                           Gdk.EventMask.POINTER_MOTION_MASK |
                           Gdk.EventMask.LEAVE_NOTIFY_MASK |
                           Gdk.EventMask.BUTTON_PRESS_MASK)
-        self.game_area.connect('configure-event', self.on_resize)
+        self.game_area.connect('draw', self.on_draw)
+        self.game_area.connect('size-allocate', self.on_resize)
         self.game_area.connect('motion-notify-event', self.on_mouse_move)
         self.game_area.connect('leave-notify-event', self.on_mouse_leave)
         self.game_area.connect('button-press-event', self.on_mouse_click)
@@ -395,15 +402,13 @@ class SameBallApp(object):
 
     def update(self):
         self.board.update()
-        # TODO(dlazar): Investigate if it's worth using partial redraws.
-        # For now, it causes too many headaches with the window manager.
-        #pygame.display.update(self.board.draw())
-        self.redraw()
+        pygame.display.update(self.board.draw())
         return True
 
-    def redraw(self):
-        self.board.draw()
-        pygame.display.update()
+    def on_draw(self, widget, context=None):
+        ok, rect = Gdk.cairo_get_clip_rectangle(context)
+        pygame.display.update(
+                [pygame.Rect(rect.x, rect.y, rect.width, rect.height)])
 
     def on_mouse_move(self, widget, event=None):
         if self.board.block_events:
@@ -442,7 +447,6 @@ class SameBallApp(object):
         pygame.display.set_mode((self.game_area.get_allocated_width(),
                                  self.game_area.get_allocated_height()), 0, 0)
         self.board.resize()
-        self.redraw()
 
         self.resize_cb = None
         return False

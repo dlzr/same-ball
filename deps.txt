@@ -1,0 +1,2 @@
+python-gi
+python-gi-cairo
