@@ -203,6 +203,7 @@ class Board(object):
         self.spinning_cluster = None
         self.vanishing_cluster = None
         self.dropping_cluster = None
+        self.dropped_cluster = pygame.sprite.RenderUpdates()
 
         self.block_events = False
 
@@ -230,13 +231,51 @@ class Board(object):
         for ball in self.all_balls.sprites():
             ball.resize()
 
+    def show(self):
+        self.surface.fill(to_pygame(BG_COLOR))
+        self.all_balls.draw(self.surface)
+
     def update(self):
+        update_rects = []
+        update_rects.extend(self.undraw())
+
         self.t = time.time()
         self.all_balls.update()
 
+        update_rects.extend(self.draw())
+        return update_rects
+
+    def has_updates(self):
+        return self.spinning_cluster or self.vanishing_cluster or self.dropping_cluster
+
     def draw(self):
-        self.surface.fill(to_pygame(BG_COLOR))
-        return self.all_balls.draw(self.surface)
+        update_rects = []
+        if self.spinning_cluster:
+            update_rects.extend(self.spinning_cluster.draw(self.surface))
+        if self.vanishing_cluster:
+            update_rects.extend(self.vanishing_cluster.draw(self.surface))
+        if self.dropping_cluster:
+            update_rects.extend(self.dropping_cluster.draw(self.surface))
+        if self.dropped_cluster:
+            update_rects.extend(self.dropped_cluster.draw(self.surface))
+            self.dropped_cluster.empty()
+        return update_rects
+
+    def undraw(self):
+        update_rects = []
+
+        def undraw_cluster(cluster):
+            if not cluster:
+                return
+            for ball in cluster.sprites():
+                self.surface.fill(to_pygame(BG_COLOR), ball.rect)
+                update_rects.append(ball.rect)
+
+        undraw_cluster(self.spinning_cluster)
+        undraw_cluster(self.vanishing_cluster)
+        undraw_cluster(self.dropping_cluster)
+
+        return update_rects
 
     def cluster_balls(self):
         def cluster(ball1, ball2):
@@ -265,11 +304,13 @@ class Board(object):
                 cluster(self.balls[col][row], self.balls[col][row+1])
 
     def start_spinning_cluster(self, cluster):
+        self.t = time.time()
         self.spinning_cluster = cluster
         for ball in cluster.sprites():
             ball.start_spinning()
 
     def stop_spinning_cluster(self):
+        self.t = time.time()
         if not self.spinning_cluster:
             return
 
@@ -278,6 +319,7 @@ class Board(object):
         self.spinning_cluster = None
 
     def kill_spinning_cluster(self):
+        self.t = time.time()
         if not self.spinning_cluster:
             raise RuntimeError("Board.kill_spinning_cluster() called unexpectedly.")
 
@@ -336,6 +378,7 @@ class Board(object):
         self.balls[ball.col][ball.row] = ball
 
         self.dropping_cluster.remove(ball)
+        self.dropped_cluster.add(ball)
         if not self.dropping_cluster:
             self.stop_dropping_balls()
 
@@ -351,6 +394,7 @@ class SameBallApp(object):
     # resizing the window, we delay the actual resize until the user activity
     # stops.
     RESIZE_DELAY_MS = 100
+    DRAW_DELAY_MS = 1
 
     def __init__(self):
         self.init_ui()
@@ -384,6 +428,8 @@ class SameBallApp(object):
         self.screen = pygame.display.get_surface()
 
         self.resize_cb = None
+        self.draw_cb = None
+        self.draw_rects = []
 
         window = self.game_area.get_window()
         window.set_events(window.get_events() |
@@ -397,18 +443,46 @@ class SameBallApp(object):
         self.game_area.connect('button-press-event', self.on_mouse_click)
 
     def run(self):
-        GObject.timeout_add(FRAME_DURATION_MS, self.update)
+        self.board.show()
+        pygame.display.update()
         Gtk.main()
 
+    def schedule_update(self):
+        if self.board.has_updates():
+            GObject.timeout_add(FRAME_DURATION_MS, self.update)
+
     def update(self):
-        self.board.update()
-        pygame.display.update(self.board.draw())
-        return True
+        pygame.display.update(self.board.update())
+        self.schedule_update()
+        return False
 
     def on_draw(self, widget, context=None):
+        # HACK HACK HACK HACK HACK HACK HACK
+        # We'd normally just re-draw the damaged area here, but for some reason
+        # (interaction between pygame and pygtk? bad interaction with the
+        # window manager? cosmic radiation? bad karma?), the updated area just
+        # gets cleared to the background color right after this callback.  So,
+        # instead of drawing now, we just schedule a redraw 1ms from now, after
+        # that rogue clearing took place.
+        # HACK HACK HACK HACK HACK HACK HACK
+        if self.draw_cb:
+            GObject.source_remove(self.draw_cb)
         ok, rect = Gdk.cairo_get_clip_rectangle(context)
-        pygame.display.update(
-                [pygame.Rect(rect.x, rect.y, rect.width, rect.height)])
+        self.draw_rects.append(
+                pygame.Rect(rect.x, rect.y, rect.width, rect.height))
+        self.draw_cb = GObject.timeout_add(
+                SameBallApp.DRAW_DELAY_MS, self.draw)
+
+    def draw(self):
+        self.board.show()
+        if self.draw_rects:
+            pygame.display.update(self.draw_rects)
+        else:
+            pygame.display.update()
+
+        self.draw_cb = None
+        del self.draw_rects[:]
+        return False
 
     def on_mouse_move(self, widget, event=None):
         if self.board.block_events:
@@ -418,14 +492,19 @@ class SameBallApp(object):
         if not ball:
             self.board.stop_spinning_cluster()
             return
+
         if ball.state == Ball.STATE_SPIN:
             return
+
         self.board.stop_spinning_cluster()
         if len(ball.cluster) > 1:
             self.board.start_spinning_cluster(ball.cluster)
 
+        self.schedule_update()
+
     def on_mouse_leave(self, widget, event=None):
         self.board.stop_spinning_cluster()
+        self.schedule_update()
 
     def on_mouse_click(self, widget, event=None):
         if self.board.block_events:
@@ -436,6 +515,7 @@ class SameBallApp(object):
             return
         if ball.state == Ball.STATE_SPIN:
             self.board.kill_spinning_cluster()
+        self.schedule_update()
 
     def on_resize(self, widget, event=None):
         if self.resize_cb:
@@ -447,6 +527,8 @@ class SameBallApp(object):
         pygame.display.set_mode((self.game_area.get_allocated_width(),
                                  self.game_area.get_allocated_height()), 0, 0)
         self.board.resize()
+        self.board.show()
+        pygame.display.update()
 
         self.resize_cb = None
         return False
@@ -456,6 +538,7 @@ class SameBallApp(object):
 
     def on_game_new(self, widget=None, data=None):
         self.board = Board(self.screen, self.num_colors, self.num_columns, self.num_rows)
+        self.draw()
 
     def on_game_size(self, widget, data=None):
         if not widget.get_active():

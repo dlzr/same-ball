@@ -4,7 +4,7 @@
 - implement game-over screen/dialog
 - support loading specific game (game/load)
 - display status in status bar
-- don't use CPU when nothing is going on
+- support variable FPS
 
 ______________________
 vim: set sw=2 sts=2 et
