@@ -16,8 +16,6 @@ import re
 import time
 
 
-FPS = 30
-FRAME_DURATION_MS = int(1000 / FPS)
 BG_COLOR = Gdk.color_parse('#202026')
 
 
@@ -236,11 +234,17 @@ class Board(object):
         self.all_balls.draw(self.surface)
 
     def update(self):
+        self.t = time.time()
+
         update_rects = []
         update_rects.extend(self.undraw())
 
-        self.t = time.time()
-        self.all_balls.update()
+        if self.spinning_cluster:
+            self.spinning_cluster.update()
+        if self.vanishing_cluster:
+            self.vanishing_cluster.update()
+        if self.dropping_cluster:
+            self.dropping_cluster.update()
 
         update_rects.extend(self.draw())
         return update_rects
@@ -396,6 +400,9 @@ class SameBallApp(object):
     RESIZE_DELAY_MS = 100
     DRAW_DELAY_MS = 1
 
+    MAX_FPS = 60
+    MAX_CPU_LOAD = 0.5
+
     def __init__(self):
         self.init_ui()
         Ball.load_images()
@@ -427,6 +434,8 @@ class SameBallApp(object):
                                  pygame.DOUBLEBUF, 0)
         self.screen = pygame.display.get_surface()
 
+        self.update_cb = None
+        self.update_duration_s = 1 / SameBallApp.MAX_FPS
         self.resize_cb = None
         self.draw_cb = None
         self.draw_rects = []
@@ -448,11 +457,19 @@ class SameBallApp(object):
         Gtk.main()
 
     def schedule_update(self):
+        if self.update_cb:
+            return
+
         if self.board.has_updates():
-            GObject.timeout_add(FRAME_DURATION_MS, self.update)
+            update_delay_ms = int(max(
+                    self.update_duration_s / SameBallApp.MAX_CPU_LOAD * 1000,
+                    1000 / SameBallApp.MAX_FPS))
+            self.update_cb = GObject.timeout_add(update_delay_ms, self.update)
 
     def update(self):
+        self.update_cb = None
         pygame.display.update(self.board.update())
+        self.update_duration_s = time.time() - self.board.t
         self.schedule_update()
         return False
 
