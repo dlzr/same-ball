@@ -205,6 +205,8 @@ class Board(object):
 
         self.block_events = False
 
+        self.score = 0
+
     def ball_at(self, x, y):
         col = int((x - self.padding_x) / Ball.SIZE)
         row = int((y - self.padding_y) / Ball.SIZE)
@@ -282,6 +284,8 @@ class Board(object):
         return update_rects
 
     def cluster_balls(self):
+        self.has_clusters = False
+
         def cluster(ball1, ball2):
             if ball1 is None or ball2 is None:
                 return
@@ -291,6 +295,7 @@ class Board(object):
                 for ball in old_cluster.sprites():
                     ball.cluster = ball1.cluster
                 old_cluster.empty()
+                self.has_clusters = True
 
         for col_balls in self.balls:
             for ball in col_balls:
@@ -335,6 +340,9 @@ class Board(object):
         for ball in self.vanishing_cluster:
             self.balls[ball.col][ball.row] = None
             ball.vanish()
+
+        n = len(self.vanishing_cluster)
+        self.score += n * (n - 1)
 
     def remove_ball(self, ball):
         if ball.state != Ball.STATE_VANISH:
@@ -391,6 +399,13 @@ class Board(object):
         self.cluster_balls()
         self.block_events = False
 
+    def get_final_score(self):
+        n = len(self.all_balls)
+        cleanup_score = 0
+        if n == 0:
+            cleanup_score = 100
+        return self.score - n * (n - 1) + cleanup_score
+
 
 class SameBallApp(object):
 
@@ -428,6 +443,8 @@ class SameBallApp(object):
         os.putenv('SDL_WINDOWID', str(self.game_area.get_window().get_xid()))
         Gdk.flush()
 
+        self.status_bar = self.builder.get_object('status_bar')
+
         pygame.init()
         pygame.display.set_mode((self.game_area.get_allocated_width(),
                                  self.game_area.get_allocated_height()),
@@ -456,6 +473,14 @@ class SameBallApp(object):
         pygame.display.update()
         Gtk.main()
 
+    def show_score(self):
+        if self.board.has_clusters:
+            message = "{} points".format(self.board.score)
+        else:
+            message = "Game over.  Final score: {} points".format(
+                    self.board.get_final_score())
+        self.status_bar.push(0, message)
+
     def schedule_update(self):
         if self.update_cb:
             return
@@ -465,6 +490,8 @@ class SameBallApp(object):
                     self.update_duration_s / SameBallApp.MAX_CPU_LOAD * 1000,
                     1000 / SameBallApp.MAX_FPS))
             self.update_cb = GObject.timeout_add(update_delay_ms, self.update)
+        else:
+            self.show_score()
 
     def update(self):
         self.update_cb = None
@@ -532,6 +559,7 @@ class SameBallApp(object):
             return
         if ball.state == Ball.STATE_SPIN:
             self.board.kill_spinning_cluster()
+            self.show_score()
         self.schedule_update()
 
     def on_resize(self, widget, event=None):
@@ -555,6 +583,7 @@ class SameBallApp(object):
 
     def on_game_new(self, widget=None, data=None):
         self.board = Board(self.screen, self.num_colors, self.num_columns, self.num_rows)
+        self.show_score()
         self.draw()
 
     def on_game_size(self, widget, data=None):
