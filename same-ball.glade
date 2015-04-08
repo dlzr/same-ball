@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
-  <object class="GtkImage" id="image1">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-zoom-fit</property>
-  </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Same Ball</property>
@@ -32,26 +27,23 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
-                      <object class="GtkImageMenuItem" id="new_game_menu_item">
-                        <property name="label">gtk-new</property>
+                      <object class="GtkMenuItem" id="new_game_menu_item">
+                        <property name="label">_New</property>
                         <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
-                        <property name="use_stock">True</property>
                         <accelerator key="n" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                         <signal name="activate" handler="on_game_new" swapped="no"/>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkImageMenuItem" id="board_size_menu_item">
+                      <object class="GtkMenuItem" id="board_size_menu_item">
                         <property name="label" translatable="yes">Board _Size</property>
                         <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
-                        <property name="image">image1</property>
-                        <property name="use_stock">False</property>
                         <child type="submenu">
                           <object class="GtkMenu" id="board_size_menu">
                             <property name="visible">True</property>
@@ -101,7 +93,7 @@
                         <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Difficulty</property>
+                        <property name="label" translatable="yes">_Difficulty</property>
                         <property name="use_underline">True</property>
                         <child type="submenu">
                           <object class="GtkMenu" id="menu1">
@@ -112,7 +104,7 @@
                                 <property name="use_action_appearance">False</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">3 Colors</property>
+                                <property name="label" translatable="yes">_3 Colors</property>
                                 <property name="use_underline">True</property>
                                 <property name="draw_as_radio">True</property>
                                 <signal name="toggled" handler="on_game_difficulty" swapped="no"/>
@@ -123,7 +115,7 @@
                                 <property name="use_action_appearance">False</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">4 Colors</property>
+                                <property name="label" translatable="yes">_4 Colors</property>
                                 <property name="use_underline">True</property>
                                 <property name="active">True</property>
                                 <property name="draw_as_radio">True</property>
@@ -136,7 +128,7 @@
                                 <property name="use_action_appearance">False</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">5 Colors</property>
+                                <property name="label" translatable="yes">_5 Colors</property>
                                 <property name="use_underline">True</property>
                                 <property name="draw_as_radio">True</property>
                                 <property name="group">colors3_menu_item</property>
@@ -148,7 +140,7 @@
                                 <property name="use_action_appearance">False</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">6 Colors</property>
+                                <property name="label" translatable="yes">_6 Colors</property>
                                 <property name="use_underline">True</property>
                                 <property name="draw_as_radio">True</property>
                                 <property name="group">colors3_menu_item</property>
@@ -176,13 +168,12 @@
                       </object>
                     </child>
                     <child>
-                      <object class="GtkImageMenuItem" id="quit_menu_item">
-                        <property name="label">gtk-quit</property>
+                      <object class="GtkMenuItem" id="quit_menu_item">
+                        <property name="label">_Quit</property>
                         <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
-                        <property name="use_stock">True</property>
                         <accelerator key="q" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                         <accelerator key="w" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                         <signal name="activate" handler="on_quit" swapped="no"/>
@@ -204,13 +195,12 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
-                      <object class="GtkImageMenuItem" id="imagemenuitem10">
-                        <property name="label">gtk-about</property>
+                      <object class="GtkMenuItem" id="help_about_menu_item">
+                        <property name="label">_About</property>
                         <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
-                        <property name="use_stock">True</property>
                       </object>
                     </child>
                   </object>
