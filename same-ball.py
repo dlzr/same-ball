@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# coding: utf-8
 
 from __future__ import division
 
@@ -330,7 +331,7 @@ class Board(object):
     def kill_spinning_cluster(self):
         self.t = time.time()
         if not self.spinning_cluster:
-            raise RuntimeError("Board.kill_spinning_cluster() called unexpectedly.")
+            raise RuntimeError('Board.kill_spinning_cluster() called unexpectedly.')
 
         self.block_events = True
 
@@ -346,7 +347,7 @@ class Board(object):
 
     def remove_ball(self, ball):
         if ball.state != Ball.STATE_VANISH:
-            raise RuntimeError("Board.remove_ball() called unexpectedly.")
+            raise RuntimeError('Board.remove_ball() called unexpectedly.')
 
         self.all_balls.remove(ball)
         self.vanishing_cluster.remove(ball)
@@ -444,6 +445,8 @@ class SameBallApp(object):
         Gdk.flush()
 
         self.status_bar = self.builder.get_object('status_bar')
+        self.status_bar_context_id = self.status_bar.get_context_id('score')
+        self.high_scores_dialog = self.builder.get_object('high_scores_dialog')
 
         pygame.init()
         pygame.display.set_mode((self.game_area.get_allocated_width(),
@@ -472,14 +475,6 @@ class SameBallApp(object):
         self.board.show()
         pygame.display.update()
         Gtk.main()
-
-    def show_score(self):
-        if self.board.has_clusters:
-            message = "{} points".format(self.board.score)
-        else:
-            message = "Game over.  Final score: {} points".format(
-                    self.board.get_final_score())
-        self.status_bar.push(0, message)
 
     def schedule_update(self):
         if self.update_cb:
@@ -578,10 +573,42 @@ class SameBallApp(object):
         self.resize_cb = None
         return False
 
+    def show_score(self):
+        if self.game_over:
+            return
+
+        if self.board.has_clusters:
+            message = '{} points'.format(self.board.score)
+            self.status_bar.pop(self.status_bar_context_id)
+            self.status_bar.push(self.status_bar_context_id, message)
+        else:
+            self.game_over = True
+            self.status_bar.pop(self.status_bar_context_id)
+            self.show_high_scores_dialog()
+
+    def show_high_scores_dialog(self):
+        if self.board.has_clusters:
+            # The game isn't over yet, just show the high scores.
+            pass
+        else:
+            if len(self.board.all_balls):
+                message = 'Game over'
+            else:
+                message = 'You won!'
+            self.builder.get_object('game_over_label').set_text(message)
+            self.builder.get_object('score_label').set_text(
+                    'Final score: {} points'.format(
+                        self.board.get_final_score()))
+        self.high_scores_dialog.show()
+
+    def on_high_scores_ok(self, widget, data=None):
+        self.high_scores_dialog.hide()
+
     def on_quit(self, widget, data=None):
         Gtk.main_quit()
 
     def on_game_new(self, widget=None, data=None):
+        self.game_over = False
         self.board = Board(self.screen, self.num_colors, self.num_columns, self.num_rows)
         self.show_score()
         self.draw()
