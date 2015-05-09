@@ -23,10 +23,12 @@ BG_COLOR = Gdk.color_parse('#202026')
 def generate_game_seed():
     return base64.b32encode(hashlib.sha256(str(time.time())).digest()[:5])
 
+
 def to_pygame(gdk_color):
     return (gdk_color.red / 256,
             gdk_color.green / 256,
             gdk_color.blue / 256)
+
 
 class Ball(pygame.sprite.Sprite):
 
@@ -447,6 +449,7 @@ class SameBallApp(object):
         self.status_bar = self.builder.get_object('status_bar')
         self.status_bar_context_id = self.status_bar.get_context_id('score')
         self.high_scores_dialog = self.builder.get_object('high_scores_dialog')
+        self.high_scores_dialog.set_transient_for(self.window)
 
         pygame.init()
         pygame.display.set_mode((self.game_area.get_allocated_width(),
