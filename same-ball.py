@@ -1,9 +1,6 @@
-#!/usr/bin/python
-# coding: utf-8
+#!/usr/bin/python3
 
-from __future__ import division
-
-from gi.repository import GObject
+from gi.repository import GLib
 from gi.repository import Gdk
 from gi.repository import GdkX11
 from gi.repository import Gtk
@@ -14,20 +11,23 @@ import os
 import pygame
 import random
 import re
+import struct
 import time
 
 
-BG_COLOR = Gdk.color_parse('#202026')
+BG_COLOR = Gdk.RGBA()
+BG_COLOR.parse('#202026')
 
 
 def generate_game_seed():
-    return base64.b32encode(hashlib.sha256(str(time.time())).digest()[:5])
+    return base64.b32encode(hashlib.sha256(
+        struct.pack("!d", time.time())).digest()[:5])
 
 
 def to_pygame(gdk_color):
-    return (gdk_color.red / 256,
-            gdk_color.green / 256,
-            gdk_color.blue / 256)
+    return (int(gdk_color.red * 255),
+            int(gdk_color.green * 255),
+            int(gdk_color.blue * 255))
 
 
 class Ball(pygame.sprite.Sprite):
@@ -441,7 +441,7 @@ class SameBallApp(object):
         self.window.connect('delete-event', self.on_quit)
 
         self.game_area = self.builder.get_object('game_area')
-        self.game_area.modify_bg(Gtk.StateType.NORMAL, BG_COLOR)
+        self.game_area.override_background_color(Gtk.StateFlags.NORMAL, BG_COLOR)
         self.game_area.realize()
         os.putenv('SDL_WINDOWID', str(self.game_area.get_window().get_xid()))
         Gdk.flush()
@@ -487,7 +487,7 @@ class SameBallApp(object):
             update_delay_ms = int(max(
                     self.update_duration_s / SameBallApp.MAX_CPU_LOAD * 1000,
                     1000 / SameBallApp.MAX_FPS))
-            self.update_cb = GObject.timeout_add(update_delay_ms, self.update)
+            self.update_cb = GLib.timeout_add(update_delay_ms, self.update)
         else:
             self.show_score()
 
@@ -508,11 +508,11 @@ class SameBallApp(object):
         # that rogue clearing took place.
         # HACK HACK HACK HACK HACK HACK HACK
         if self.draw_cb:
-            GObject.source_remove(self.draw_cb)
+            GLib.source_remove(self.draw_cb)
         ok, rect = Gdk.cairo_get_clip_rectangle(context)
         self.draw_rects.append(
                 pygame.Rect(rect.x, rect.y, rect.width, rect.height))
-        self.draw_cb = GObject.timeout_add(
+        self.draw_cb = GLib.timeout_add(
                 SameBallApp.DRAW_DELAY_MS, self.draw)
 
     def draw(self):
@@ -562,8 +562,8 @@ class SameBallApp(object):
 
     def on_resize(self, widget, event=None):
         if self.resize_cb:
-            GObject.source_remove(self.resize_cb)
-        self.resize_cb = GObject.timeout_add(
+            GLib.source_remove(self.resize_cb)
+        self.resize_cb = GLib.timeout_add(
                 SameBallApp.RESIZE_DELAY_MS, self.resize)
 
     def resize(self):
