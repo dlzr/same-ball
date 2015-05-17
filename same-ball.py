@@ -5,6 +5,7 @@ from gi.repository import Gdk
 from gi.repository import GdkX11
 from gi.repository import Gtk
 import base64
+import csv
 import hashlib
 import math
 import os
@@ -13,7 +14,9 @@ import random
 import re
 import struct
 import time
+import xdg.BaseDirectory
 
+APP_DIR = 'same-ball'
 
 BG_COLOR = Gdk.RGBA()
 BG_COLOR.parse('#202026')
@@ -185,13 +188,14 @@ class Board(object):
 
     def __init__(self, surface, num_colors, num_columns, num_rows, game_seed=''):
         self.surface = surface
+        self.num_colors = num_colors
         self.num_columns = num_columns
         self.num_rows = num_rows
 
         self.game_seed = game_seed or generate_game_seed()
         random.seed(base64.b32decode(self.game_seed, casefold=True))
 
-        Ball.init(num_colors)
+        Ball.init(self.num_colors)
         self.all_balls = pygame.sprite.RenderUpdates()
         self.resize()
 
@@ -403,11 +407,115 @@ class Board(object):
         self.block_events = False
 
     def get_final_score(self):
+        # Increment Score.VERSION when modifying this function.
         n = len(self.all_balls)
         cleanup_score = 0
         if n == 0:
             cleanup_score = 100
-        return self.score - n * (n - 1) + cleanup_score
+        return Score.new(self.score - n * (n - 1) + cleanup_score,
+                         n == 0,
+                         '{}x{}'.format(self.num_columns, self.num_rows),
+                         self.num_colors)
+
+
+class Score(object):
+
+    VERSION = 1
+
+    HDR_VERSION = 'version'
+    HDR_CLEARED_BOARD = 'cleared-board'
+    HDR_POINTS = 'points'
+    HDR_BOARD_SIZE = 'board-size'
+    HDR_NUM_COLORS = 'num-colors'
+    HDR_TIME = 'time'
+
+    @staticmethod
+    def headers():
+        return [Score.HDR_VERSION,
+                Score.HDR_POINTS,
+                Score.HDR_CLEARED_BOARD,
+                Score.HDR_BOARD_SIZE,
+                Score.HDR_NUM_COLORS,
+                Score.HDR_TIME]
+
+    @staticmethod
+    def from_values(values):
+        return Score(int(values.get(Score.HDR_VERSION, 1)),
+                     int(values.get(Score.HDR_POINTS, 0)),
+                     (values.get(Score.HDR_CLEARED_BOARD, '') == 'True'),
+                     values.get(Score.HDR_BOARD_SIZE, '4x4'),
+                     int(values.get(Score.HDR_NUM_COLORS, 4)),
+                     int(values.get(Score.HDR_TIME, 0)))
+
+    @staticmethod
+    def new(points, cleared_board, board_size, num_colors):
+        return Score(Score.VERSION, points, cleared_board, board_size, num_colors,
+                     int(time.time()))
+
+    def __init__(self, version, points, cleared_board, board_size, num_colors, time):
+        self.version = version
+        self.points = points
+        self.cleared_board = cleared_board
+        self.board_size = board_size
+        self.num_colors = num_colors
+        self.time = time
+
+    def values(self):
+        return [str(self.version),
+                str(self.points),
+                str(self.cleared_board),
+                str(self.board_size),
+                str(self.num_colors),
+                str(int(self.time))]
+
+    def __lt__(self, other):
+        if self.version > other.version: return True
+        if self.version < other.version: return False
+        if self.points > other.points: return True
+        if self.points < other.points: return False
+        if self.cleared_board and not other.cleared_board: return True
+        if not self.cleared_board and other.cleared_board: return False
+        return False
+
+
+class HighScores(object):
+
+    FILE = 'high-scores.csv'
+    SIZE = 10
+
+    def __init__(self):
+        self.scores = []
+        self.load()
+
+    def add(self, score):
+        self.scores.append(score)
+        self.scores.sort()
+        del self.scores[HighScores.SIZE + 1:]
+
+        self.save()
+
+    def load(self):
+        def load_from_file(file_name):
+            try:
+                with open(file_name, newline='', encoding='utf-8') as f:
+                    return [Score.from_values(v) for v in csv.DictReader(f)]
+            except FileNotFoundError:
+                return []
+
+        for path in xdg.BaseDirectory.load_data_paths(APP_DIR):
+            self.scores = load_from_file(os.path.join(path, HighScores.FILE))
+            if self.scores:
+                return True
+
+        return False
+
+    def save(self):
+        file_name = os.path.join(xdg.BaseDirectory.save_data_path(APP_DIR),
+                                 HighScores.FILE)
+        with open(file_name, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(Score.headers())
+            writer.writerows(score.values() for score in self.scores)
 
 
 class SameBallApp(object):
@@ -422,6 +530,7 @@ class SameBallApp(object):
     MAX_CPU_LOAD = 0.5
 
     def __init__(self):
+        self.high_scores = HighScores()
         self.init_ui()
         Ball.load_images()
 
@@ -587,11 +696,14 @@ class SameBallApp(object):
         else:
             self.game_over = True
             self.status_bar.pop(self.status_bar_context_id)
+            self.high_scores.add(self.board.get_final_score())
             self.show_high_scores_dialog()
 
     def show_high_scores_dialog(self):
         if self.board.has_clusters:
             # The game isn't over yet, just show the high scores.
+            # TODO: Add list of high scores here.
+            # TODO: Headers: cleared_table, date, difficulty, score
             pass
         else:
             if len(self.board.all_balls):
@@ -601,7 +713,7 @@ class SameBallApp(object):
             self.builder.get_object('game_over_label').set_text(message)
             self.builder.get_object('score_label').set_text(
                     'Final score: {} points'.format(
-                        self.board.get_final_score()))
+                        self.board.get_final_score().points))
         self.high_scores_dialog.show()
 
     def on_high_scores_ok(self, widget, data=None):
