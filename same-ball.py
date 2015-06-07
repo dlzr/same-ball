@@ -409,10 +409,10 @@ class Board(object):
     def get_final_score(self):
         # Increment Score.VERSION when modifying this function.
         n = len(self.all_balls)
-        cleanup_score = 0
+        cleanup_bonus = 0
         if n == 0:
-            cleanup_score = 100
-        return Score.new(self.score - n * (n - 1) + cleanup_score,
+            cleanup_bonus = self.num_columns * self.num_rows * self.num_colors
+        return Score.new(self.score + cleanup_bonus,
                          n == 0,
                          '{}x{}'.format(self.num_columns, self.num_rows),
                          self.num_colors)
