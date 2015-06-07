@@ -429,6 +429,8 @@ class Score(object):
     HDR_NUM_COLORS = 'num-colors'
     HDR_TIME = 'time'
 
+    CLEARED_BOARD_IMAGE = 'cleared-board.png'
+
     @staticmethod
     def headers():
         return [Score.HDR_VERSION,
@@ -477,6 +479,40 @@ class Score(object):
         if not self.cleared_board and other.cleared_board: return False
         return False
 
+    def points_str(self):
+        return '{} points'.format(self.points)
+
+    def num_colors_str(self):
+        return '{} colors'.format(self.num_colors)
+
+    def board_size_str(self):
+        board_sizes = {
+                '6x5': 'small',
+                '10x7': 'medium',
+                '15x10': 'large',
+        }
+        return board_sizes.get(self.board_size, self.board_size)
+
+    def time_str(self):
+        return time.strftime('%x', time.localtime(self.time))
+
+    def populate(self, grid, row, bold):
+        def attach(widget, column):
+            grid.attach(widget, column, row, 1, 1)
+
+        def make_label(message):
+            l = Gtk.Label(message)
+            if bold:
+                l.set_markup('<b>' + GLib.markup_escape_text(message) + '</b>')
+            return l
+
+        if self.cleared_board:
+            attach(Gtk.Image.new_from_file(Score.CLEARED_BOARD_IMAGE), 0)
+        attach(make_label(self.points_str()), 1)
+        attach(make_label(self.num_colors_str()), 2)
+        attach(make_label(self.board_size_str()), 3)
+        attach(make_label(self.time_str()), 4)
+
 
 class HighScores(object):
 
@@ -485,16 +521,26 @@ class HighScores(object):
 
     def __init__(self):
         self.scores = []
-        self.load()
+        self._load()
 
     def add(self, score):
         self.scores.append(score)
-        self.scores.sort()
+        i = len(self.scores) - 1
+        while i > 0 and self.scores[i-1] > self.scores[i]:
+            self.scores[i-1], self.scores[i] = self.scores[i], self.scores[i-1]
+            i -= 1
         del self.scores[HighScores.SIZE + 1:]
 
-        self.save()
+        self._save()
+        return i
 
-    def load(self):
+    def populate(self, grid, current_score_index):
+        grid.foreach(lambda widget: grid.remove(widget))
+        for i, score in enumerate(self.scores):
+            score.populate(grid, i, i == current_score_index)
+        grid.show_all()
+
+    def _load(self):
         def load_from_file(file_name):
             try:
                 with open(file_name, newline='', encoding='utf-8') as f:
@@ -509,7 +555,7 @@ class HighScores(object):
 
         return False
 
-    def save(self):
+    def _save(self):
         file_name = os.path.join(xdg.BaseDirectory.save_data_path(APP_DIR),
                                  HighScores.FILE)
         with open(file_name, 'w', newline='', encoding='utf-8') as f:
@@ -559,6 +605,8 @@ class SameBallApp(object):
         self.status_bar_context_id = self.status_bar.get_context_id('score')
         self.high_scores_dialog = self.builder.get_object('high_scores_dialog')
         self.high_scores_dialog.set_transient_for(self.window)
+        self.game_over_label = self.builder.get_object('game_over_label')
+        self.final_score_label = self.builder.get_object('final_score_label')
 
         pygame.init()
         pygame.display.set_mode((self.game_area.get_allocated_width(),
@@ -696,25 +744,33 @@ class SameBallApp(object):
         else:
             self.game_over = True
             self.status_bar.pop(self.status_bar_context_id)
-            self.high_scores.add(self.board.get_final_score())
-            self.show_high_scores_dialog()
+            self.show_game_over_dialog()
 
-    def show_high_scores_dialog(self):
-        if self.board.has_clusters:
-            # The game isn't over yet, just show the high scores.
-            # TODO: Add list of high scores here.
-            # TODO: Headers: cleared_table, date, difficulty, score
-            pass
+    def show_game_over_dialog(self):
+        final_score = self.board.get_final_score()
+
+        if len(self.board.all_balls):
+            message = 'Game over'
         else:
-            if len(self.board.all_balls):
-                message = 'Game over'
-            else:
-                message = 'You won!'
-            self.builder.get_object('game_over_label').set_text(message)
-            self.builder.get_object('score_label').set_text(
-                    'Final score: {} points'.format(
-                        self.board.get_final_score().points))
+            message = 'You won!'
+        self.high_scores_dialog.set_title(message)
+        self.game_over_label.set_text(message)
+        self.final_score_label.set_text(
+                'Final score: {} points'.format(final_score.points))
+        self.final_score_label.show()
+        current_score_index = self.high_scores.add(final_score)
+        self.show_high_scores_dialog(current_score_index)
+
+    def show_high_scores_dialog(self, current_score_index=None):
+        high_scores_grid = self.builder.get_object('high_scores_grid')
+        self.high_scores.populate(high_scores_grid, current_score_index)
         self.high_scores_dialog.show()
+
+    def on_game_high_scores(self, widget, data=None):
+        self.game_over_label.set_text('High Scores')
+        self.high_scores_dialog.set_title('High Scores')
+        self.final_score_label.hide()
+        self.show_high_scores_dialog()
 
     def on_high_scores_ok(self, widget, data=None):
         self.high_scores_dialog.hide()
