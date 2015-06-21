@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.18.3 -->
 <interface>
   <requires lib="gtk+" version="3.0"/>
   <object class="GtkWindow" id="main_window">
@@ -202,6 +203,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
+                        <signal name="activate" handler="on_help_about" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -272,6 +274,7 @@
     <property name="border_width">5</property>
     <property name="title" translatable="yes">Game Over</property>
     <property name="type_hint">dialog</property>
+    <signal name="delete-event" handler="hide_on_delete" swapped="no"/>
     <child internal-child="vbox">
       <object class="GtkBox" id="high_scores_dialog_body">
         <property name="can_focus">False</property>
@@ -361,7 +364,6 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_action_appearance">False</property>
                 <signal name="clicked" handler="on_high_scores_ok" swapped="no"/>
               </object>
               <packing>
@@ -380,5 +382,26 @@
         </child>
       </object>
     </child>
+  </object>
+  <object class="GtkAboutDialog" id="about_dialog">
+    <property name="can_focus">False</property>
+    <property name="title" translatable="yes">About Same Ball</property>
+    <property name="type_hint">dialog</property>
+    <property name="transient_for">main_window</property>
+    <property name="program_name">Same Ball</property>
+    <property name="version">0.9</property>
+    <property name="copyright">© 2015 David Lazăr</property>
+    <property name="comments" translatable="yes">Can you clear the board?</property>
+    <property name="license">Copyright 2015 David Lazăr
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.</property>
+    <property name="logo">same-ball.png</property>
+    <property name="wrap_license">True</property>
+    <property name="license_type">custom</property>
+    <signal name="delete-event" handler="hide_on_delete" swapped="no"/>
   </object>
 </interface>

@@ -607,6 +607,7 @@ class SameBallApp(object):
         self.high_scores_dialog.set_transient_for(self.window)
         self.game_over_label = self.builder.get_object('game_over_label')
         self.final_score_label = self.builder.get_object('final_score_label')
+        self.about_dialog = self.builder.get_object('about_dialog')
 
         pygame.init()
         pygame.display.set_mode((self.game_area.get_allocated_width(),
@@ -774,6 +775,12 @@ class SameBallApp(object):
 
     def on_high_scores_ok(self, widget, data=None):
         self.high_scores_dialog.hide()
+
+    def on_help_about(self, widget, data=None):
+        self.about_dialog.show()
+
+    def hide_on_delete(self, widget, data=None):
+        return widget.hide_on_delete()
 
     def on_quit(self, widget, data=None):
         Gtk.main_quit()
