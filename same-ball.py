@@ -70,7 +70,7 @@ class Ball(pygame.sprite.Sprite):
 
     @staticmethod
     def load_images():
-        Ball.IMAGES = [pygame.image.load(f)
+        Ball.IMAGES = [pygame.image.load(os.path.join('data', f))
                        for f in ['blue.png', 'green.png', 'purple.png',
                                  'red.png', 'white.png', 'yellow.png']]
 
@@ -443,7 +443,7 @@ class Score(object):
     HDR_NUM_COLORS = 'num-colors'
     HDR_TIME = 'time'
 
-    CLEARED_BOARD_IMAGE = 'cleared-board.png'
+    CLEARED_BOARD_IMAGE = 'data/cleared-board.png'
 
     @staticmethod
     def headers():
@@ -602,7 +602,7 @@ class SameBallApp(object):
 
     def init_ui(self):
         self.builder = Gtk.Builder()
-        self.builder.add_from_file('same-ball.glade')
+        self.builder.add_from_file(os.path.join('data', 'same-ball.glade'))
         self.builder.connect_signals(self)
 
         self.window = self.builder.get_object('main_window')
