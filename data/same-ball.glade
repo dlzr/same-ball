@@ -389,7 +389,7 @@
     <property name="type_hint">dialog</property>
     <property name="transient_for">main_window</property>
     <property name="program_name">Same Ball</property>
-    <property name="version">0.9</property>
+    <property name="version">0.9.1</property>
     <property name="copyright">© 2015 David Lazăr</property>
     <property name="comments" translatable="yes">Can you clear the board?</property>
     <property name="license">Copyright 2015 David Lazăr
