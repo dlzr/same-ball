@@ -2,6 +2,8 @@
 - display current game code in status bar
 - i18n support
 - debian packaging
+  - file ITP bug
+  - add manpage
 
 ______________________
 vim: set sw=2 sts=2 et
