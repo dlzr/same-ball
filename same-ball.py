@@ -759,22 +759,34 @@ class SameBallApp(object):
         else:
             self.game_over = True
             self.status_bar.pop(self.status_bar_context_id)
-            self.show_game_over_dialog()
+            self.on_game_over()
 
-    def show_game_over_dialog(self):
+    def on_game_over(self):
         final_score = self.board.get_final_score()
+        current_score_index = self.high_scores.add(final_score)
 
         if len(self.board.all_balls):
-            message = 'Game over'
+            title_message = 'Game over'
+            status_message = 'Game over.  Final score: {} points.'.format(
+                    final_score.points)
         else:
-            message = 'You won!'
-        self.high_scores_dialog.set_title(message)
-        self.game_over_label.set_text(message)
-        self.final_score_label.set_text(
+            title_message = 'You won!'
+            status_message = 'You won!  Final score: {} points.'.format(
+                    final_score.points)
+
+        final_score_message = (
                 'Final score: {} points'.format(final_score.points))
-        self.final_score_label.show()
-        current_score_index = self.high_scores.add(final_score)
-        self.show_high_scores_dialog(current_score_index)
+
+        if current_score_index < HighScores.SIZE:
+            self.high_scores_dialog.set_title(title_message)
+            self.game_over_label.set_text(title_message)
+
+            self.final_score_label.set_text(final_score_message)
+            self.final_score_label.show()
+
+            self.show_high_scores_dialog(current_score_index)
+        else:
+            self.status_bar.push(self.status_bar_context_id, status_message)
 
     def show_high_scores_dialog(self, current_score_index=None):
         high_scores_grid = self.builder.get_object('high_scores_grid')
