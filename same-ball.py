@@ -20,6 +20,7 @@ from gi.repository import GdkX11
 from gi.repository import Gtk
 import base64
 import csv
+import gettext
 import hashlib
 import math
 import os
@@ -31,14 +32,17 @@ import time
 import xdg.BaseDirectory
 
 APP_DIR = 'same-ball'
+TRANSLATION_DOMAIN = 'same-ball'
 
 BG_COLOR = Gdk.RGBA()
 BG_COLOR.parse('#202026')
 
+gettext.install(TRANSLATION_DOMAIN, names=['ngettext'])
+
 
 def generate_game_seed():
     return base64.b32encode(hashlib.sha256(
-        struct.pack("!d", time.time())).digest()[:5])
+        struct.pack('!d', time.time())).digest()[:5])
 
 
 def to_pygame(gdk_color):
@@ -428,7 +432,7 @@ class Board(object):
             cleanup_bonus = self.num_columns * self.num_rows * self.num_colors
         return Score.new(self.score + cleanup_bonus,
                          n == 0,
-                         '{}x{}'.format(self.num_columns, self.num_rows),
+                         '{}×{}'.format(self.num_columns, self.num_rows),
                          self.num_colors)
 
 
@@ -459,7 +463,7 @@ class Score(object):
         return Score(int(values.get(Score.HDR_VERSION, 1)),
                      int(values.get(Score.HDR_POINTS, 0)),
                      (values.get(Score.HDR_CLEARED_BOARD, '') == 'True'),
-                     values.get(Score.HDR_BOARD_SIZE, '4x4'),
+                     values.get(Score.HDR_BOARD_SIZE, '4×4'),
                      int(values.get(Score.HDR_NUM_COLORS, 4)),
                      int(values.get(Score.HDR_TIME, 0)))
 
@@ -494,16 +498,22 @@ class Score(object):
         return False
 
     def points_str(self):
-        return '{} points'.format(self.points)
+        return ngettext(
+                '{num_points} point',
+                '{num_points} points',
+                self.points).format(num_points=self.points)
 
     def num_colors_str(self):
-        return '{} colors'.format(self.num_colors)
+        return ngettext(
+                '{num_colors} color',
+                '{num_colors} colors',
+                self.num_colors).format(num_colors=self.num_colors)
 
     def board_size_str(self):
         board_sizes = {
-                '6x5': 'small',
-                '10x7': 'medium',
-                '15x10': 'large',
+                '6×5': _('small'),
+                '10×7': _('medium'),
+                '15×10': _('large'),
         }
         return board_sizes.get(self.board_size, self.board_size)
 
@@ -602,6 +612,7 @@ class SameBallApp(object):
 
     def init_ui(self):
         self.builder = Gtk.Builder()
+        self.builder.set_translation_domain(TRANSLATION_DOMAIN)
         self.builder.add_from_file(os.path.join('data', 'same-ball.glade'))
         self.builder.connect_signals(self)
 
@@ -753,7 +764,10 @@ class SameBallApp(object):
             return
 
         if self.board.has_clusters:
-            message = '{} points'.format(self.board.score)
+            message = ngettext(
+                    '{num_points} point',
+                    '{num_points} points',
+                    self.board.score).format(num_points=self.board.score)
             self.status_bar.pop(self.status_bar_context_id)
             self.status_bar.push(self.status_bar_context_id, message)
         else:
@@ -766,16 +780,22 @@ class SameBallApp(object):
         current_score_index = self.high_scores.add(final_score)
 
         if len(self.board.all_balls):
-            title_message = 'Game over'
-            status_message = 'Game over.  Final score: {} points.'.format(
-                    final_score.points)
+            title_message = _('Game over')
+            status_message = ngettext(
+                    'Game over.  Final score: {num_points} point.',
+                    'Game over.  Final score: {num_points} points.',
+                    final_score.points).format(num_points=final_score.points)
         else:
-            title_message = 'You won!'
-            status_message = 'You won!  Final score: {} points.'.format(
-                    final_score.points)
+            title_message = _('You won!')
+            status_message = ngettext(
+                    'You won!  Final score: {num_points} point.',
+                    'You won!  Final score: {num_points} points.',
+                    final_score.points).format(num_points=final_score.points)
 
-        final_score_message = (
-                'Final score: {} points'.format(final_score.points))
+        final_score_message = ngettext(
+                'Final score: {num_points} point',
+                'Final score: {num_points} points',
+                final_score.points).format(num_points=final_score.points)
 
         if current_score_index < HighScores.SIZE:
             self.high_scores_dialog.set_title(title_message)
@@ -794,8 +814,8 @@ class SameBallApp(object):
         self.high_scores_dialog.show()
 
     def on_game_high_scores(self, widget, data=None):
-        self.game_over_label.set_text('High Scores')
-        self.high_scores_dialog.set_title('High Scores')
+        self.game_over_label.set_text(_('High Scores'))
+        self.high_scores_dialog.set_title(_('High Scores'))
         self.final_score_label.hide()
         self.show_high_scores_dialog()
 

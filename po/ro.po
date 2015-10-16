@@ -1,0 +1,159 @@
+# Messages for the Same Ball game.
+# Copyright (C) 2015 David Lazăr
+# This file is distributed under the same license as the Same Ball package.
+# David Lazar <dlazar@gmail.com>, 2015.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: same-ball 0.9.2\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-09-14 18:04+0200\n"
+"PO-Revision-Date: 2015-09-14 18:10+0200\n"
+"Last-Translator: David Lazar <dlazar@gmail.com>\n"
+"Language-Team: Romanian\n"
+"Language: ro\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=n==1 ? 0 : (n==0 || (n%100 > 0 && n%100 < "
+"20)) ? 1 : 2;\n"
+
+#: same-ball.py:500 same-ball.py:764
+#, python-brace-format
+msgid "{num_points} point"
+msgid_plural "{num_points} points"
+msgstr[0] "{num_points} punct"
+msgstr[1] "{num_points} puncte"
+msgstr[2] "{num_points} de puncte"
+
+#: same-ball.py:505
+#, python-brace-format
+msgid "{num_colors} color"
+msgid_plural "{num_colors} colors"
+msgstr[0] "{num_colors} culoare"
+msgstr[1] "{num_colors} culori"
+msgstr[2] "{num_colors} de culori"
+
+#: same-ball.py:511
+msgid "small"
+msgstr "mic"
+
+#: same-ball.py:512
+msgid "medium"
+msgstr "mediu"
+
+#: same-ball.py:513
+msgid "large"
+msgstr "mare"
+
+#: same-ball.py:779
+msgid "Game over"
+msgstr "Joc încheiat"
+
+#: same-ball.py:781
+#, python-brace-format
+msgid "Game over.  Final score: {num_points} point."
+msgid_plural "Game over.  Final score: {num_points} points."
+msgstr[0] "Joc încheiat.  Scor final: {num_points} punct."
+msgstr[1] "Joc încheiat.  Scor final: {num_points} puncte."
+msgstr[2] "Joc încheiat.  Scor final: {num_points} de puncte."
+
+#: same-ball.py:785
+msgid "You won!"
+msgstr "Ai câștigat!"
+
+#: same-ball.py:787
+#, python-brace-format
+msgid "You won!  Final score: {num_points} point."
+msgid_plural "You won!  Final score: {num_points} points."
+msgstr[0] "Ai câștigat!  Scor final: {num_points} punct."
+msgstr[1] "Ai câștigat!  Scor final: {num_points} puncte."
+msgstr[2] "Ai câștigat!  Scor final: {num_points} de puncte."
+
+#: same-ball.py:792
+#, python-brace-format
+msgid "Final score: {num_points} point"
+msgid_plural "Final score: {num_points} points"
+msgstr[0] "Scor final: {num_points} punct"
+msgstr[1] "Scor final: {num_points} puncte"
+msgstr[2] "Scor final: {num_points} de puncte"
+
+#: same-ball.py:813 same-ball.py:814
+msgid "High Scores"
+msgstr "Scoruri Mari"
+
+#: data/same-ball.glade.h:2
+msgid "_Game"
+msgstr "_Joc"
+
+#: data/same-ball.glade.h:3
+msgid "_New"
+msgstr "_Nou"
+
+#: data/same-ball.glade.h:4
+msgid "Board _Size"
+msgstr "_Mărime Tablă"
+
+#: data/same-ball.glade.h:5
+msgid "Small"
+msgstr "Mică"
+
+#: data/same-ball.glade.h:6
+msgid "Medium"
+msgstr "Medie"
+
+#: data/same-ball.glade.h:7
+msgid "Large"
+msgstr "Mare"
+
+#: data/same-ball.glade.h:8
+msgid "_Difficulty"
+msgstr "_Dificultate"
+
+#: data/same-ball.glade.h:9
+msgid "_3 Colors"
+msgstr "_3 Culori"
+
+#: data/same-ball.glade.h:10
+msgid "_4 Colors"
+msgstr "_4 Culori"
+
+#: data/same-ball.glade.h:11
+msgid "_5 Colors"
+msgstr "_5 Culori"
+
+#: data/same-ball.glade.h:12
+msgid "_6 Colors"
+msgstr "_6 Culori"
+
+#: data/same-ball.glade.h:13
+msgid "_High Scores"
+msgstr "_Scoruri Mari"
+
+#: data/same-ball.glade.h:14
+msgid "_Quit"
+msgstr "_Ieșire"
+
+#: data/same-ball.glade.h:15
+msgid "_Help"
+msgstr "_Ajutor"
+
+#: data/same-ball.glade.h:16
+msgid "_About"
+msgstr "_Despre"
+
+#: data/same-ball.glade.h:17
+msgid "Game Over"
+msgstr "Joc încheiat"
+
+#: data/same-ball.glade.h:18
+msgid "OK"
+msgstr "OK"
+
+#: data/same-ball.glade.h:19
+msgid "About Same Ball"
+msgstr "Despre Same Ball"
+
+#: data/same-ball.glade.h:20
+msgid "Can you clear the board?"
+msgstr "Poți elibera tabla?"

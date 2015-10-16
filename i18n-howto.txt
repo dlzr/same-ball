@@ -1,0 +1,27 @@
+1. Extract strings:
+
+  $ intltool-extract --type=gettext/glade data/same-ball.glade
+  $ xgettext --from-code=utf-8 -k_ -kN_ -o messages.pot *.py data/same-ball.glade.h
+
+
+2. Edit messages.pot, update headers if necessary (update PACKAGE, YEAR, COPYRIGHT HOLDER, VERSION).
+
+
+3a. New language:
+
+  $ LANG=ro_RO.UTF-8 msginit -o po/ro.po
+
+3b. Existing language:
+
+  $ msgmerge -U po/ro.po messages.pot
+
+
+4. Update $LANGUAGE.po (or get translations for it).
+
+
+5. Compile translations:
+
+  $ mkdir -p locale/ro/LC_MESSAGES
+  $ msgfmt ro.po -o locale/ro/LC_MESSAGES/same-ball.mo
+
+[ Details at: http://faq.pygtk.org/index.py?req=show&file=faq22.002.htp ]

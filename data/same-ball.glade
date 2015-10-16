@@ -4,7 +4,7 @@
   <requires lib="gtk+" version="3.0"/>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Same Ball</property>
+    <property name="title" translatable="no">Same Ball</property>
     <property name="default_width">760</property>
     <property name="default_height">594</property>
     <child>
@@ -29,7 +29,7 @@
                     <property name="can_focus">False</property>
                     <child>
                       <object class="GtkMenuItem" id="new_game_menu_item">
-                        <property name="label">_New</property>
+                        <property name="label" translatable="yes">_New</property>
                         <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -171,7 +171,7 @@
                     </child>
                     <child>
                       <object class="GtkMenuItem" id="quit_menu_item">
-                        <property name="label">_Quit</property>
+                        <property name="label" translatable="yes">_Quit</property>
                         <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -198,7 +198,7 @@
                     <property name="can_focus">False</property>
                     <child>
                       <object class="GtkMenuItem" id="help_about_menu_item">
-                        <property name="label">_About</property>
+                        <property name="label" translatable="yes">_About</property>
                         <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -314,7 +314,7 @@
                   <object class="GtkLabel" id="final_score_label">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Final score: 480 points</property>
+                    <property name="label" translatable="no">Final score: 480 points</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -389,7 +389,7 @@
     <property name="type_hint">dialog</property>
     <property name="transient_for">main_window</property>
     <property name="program_name">Same Ball</property>
-    <property name="version">0.9.1</property>
+    <property name="version">0.9.2</property>
     <property name="copyright">© 2015 David Lazăr</property>
     <property name="comments" translatable="yes">Can you clear the board?</property>
     <property name="license">Copyright 2015 David Lazăr
