@@ -28,6 +28,7 @@ import pygame
 import random
 import re
 import struct
+import sys
 import time
 import xdg.BaseDirectory
 
@@ -38,6 +39,16 @@ BG_COLOR = Gdk.RGBA()
 BG_COLOR.parse('#202026')
 
 gettext.install(TRANSLATION_DOMAIN, names=['ngettext'])
+
+
+def data_file(file_name):
+    if os.path.exists('data'):
+        # We appear to be running from source.
+        return os.path.join('data', file_name)
+    if os.path.exists(os.path.join(sys.prefix, 'share', APP_DIR)):
+        # We appear to be running from a package.
+        return os.path.join(sys.prefix, 'share', APP_DIR, file_name)
+    return None
 
 
 def generate_game_seed():
@@ -74,7 +85,7 @@ class Ball(pygame.sprite.Sprite):
 
     @staticmethod
     def load_images():
-        Ball.IMAGES = [pygame.image.load(os.path.join('data', f))
+        Ball.IMAGES = [pygame.image.load(data_file(f))
                        for f in ['blue.png', 'green.png', 'purple.png',
                                  'red.png', 'white.png', 'yellow.png']]
 
@@ -447,7 +458,7 @@ class Score(object):
     HDR_NUM_COLORS = 'num-colors'
     HDR_TIME = 'time'
 
-    CLEARED_BOARD_IMAGE = 'data/cleared-board.png'
+    CLEARED_BOARD_IMAGE = data_file('cleared-board.png')
 
     @staticmethod
     def headers():
@@ -613,7 +624,7 @@ class SameBallApp(object):
     def init_ui(self):
         self.builder = Gtk.Builder()
         self.builder.set_translation_domain(TRANSLATION_DOMAIN)
-        self.builder.add_from_file(os.path.join('data', 'same-ball.glade'))
+        self.builder.add_from_file(data_file('same-ball.ui'))
         self.builder.connect_signals(self)
 
         self.window = self.builder.get_object('main_window')

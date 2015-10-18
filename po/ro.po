@@ -157,3 +157,7 @@ msgstr "Despre Same Ball"
 #: data/same-ball.glade.h:20
 msgid "Can you clear the board?"
 msgstr "Poți elibera tabla?"
+
+#: same-ball.desktop.in:8
+msgid "Colored balls puzzle game"
+msgstr "Joc de gândire cu bile colorate"

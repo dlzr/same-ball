@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.18.3 -->
 <interface>
   <requires lib="gtk+" version="3.0"/>
   <object class="GtkWindow" id="main_window">
@@ -389,7 +388,7 @@
     <property name="type_hint">dialog</property>
     <property name="transient_for">main_window</property>
     <property name="program_name">Same Ball</property>
-    <property name="version">0.9.2</property>
+    <property name="version">0.9.3</property>
     <property name="copyright">© 2015 David Lazăr</property>
     <property name="comments" translatable="yes">Can you clear the board?</property>
     <property name="license">Copyright 2015 David Lazăr

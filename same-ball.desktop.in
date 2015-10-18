@@ -1,11 +1,10 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Exec=/usr/games/same-ball
+Exec=/usr/bin/same-ball
 Icon=same-ball
 Terminal=false
 Name=Same Ball
-Comment=Colored balls puzzle game
-Comment[ro]=Joc de gândire cu bile colorate
+_Comment=Colored balls puzzle game
 Categories=Game;LogicGame;
 Keywords=marble;same-game;same-gnome;
