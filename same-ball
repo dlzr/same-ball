@@ -19,6 +19,7 @@ from gi.repository import Gdk
 from gi.repository import GdkX11
 from gi.repository import Gtk
 import base64
+import configobj
 import csv
 import gettext
 import hashlib
@@ -41,13 +42,13 @@ BG_COLOR.parse('#202026')
 gettext.install(TRANSLATION_DOMAIN, names=['ngettext'])
 
 
-def data_file(file_name):
+def data_file(filename):
     if os.path.exists('data'):
         # We appear to be running from source.
-        return os.path.join('data', file_name)
+        return os.path.join('data', filename)
     if os.path.exists(os.path.join(sys.prefix, 'share', APP_DIR)):
         # We appear to be running from a package.
-        return os.path.join(sys.prefix, 'share', APP_DIR, file_name)
+        return os.path.join(sys.prefix, 'share', APP_DIR, filename)
     return None
 
 
@@ -215,11 +216,11 @@ class Ball(pygame.sprite.Sprite):
 
 class Board(object):
 
-    def __init__(self, surface, num_colors, num_columns, num_rows, game_seed=''):
+    def __init__(self, surface, config, game_seed=''):
         self.surface = surface
-        self.num_colors = num_colors
-        self.num_columns = num_columns
-        self.num_rows = num_rows
+        self.num_colors = config.as_int('num_colors')
+        self.num_columns = config.as_int('num_columns')
+        self.num_rows = config.as_int('num_rows')
 
         self.game_seed = game_seed or generate_game_seed()
         random.seed(base64.b32decode(self.game_seed, casefold=True))
@@ -230,8 +231,8 @@ class Board(object):
 
         self.t = time.time()
         self.balls = [[Ball(self, col, row, self.all_balls)
-                       for row in range(num_rows)]
-                      for col in range(num_columns)]
+                       for row in range(self.num_rows)]
+                      for col in range(self.num_columns)]
         self.cluster_balls()
 
         self.spinning_cluster = None
@@ -576,9 +577,9 @@ class HighScores(object):
         grid.show_all()
 
     def _load(self):
-        def load_from_file(file_name):
+        def load_from_file(filename):
             try:
-                with open(file_name, newline='', encoding='utf-8') as f:
+                with open(filename, newline='', encoding='utf-8') as f:
                     return [Score.from_values(v) for v in csv.DictReader(f)]
             except FileNotFoundError:
                 return []
@@ -591,15 +592,17 @@ class HighScores(object):
         return False
 
     def _save(self):
-        file_name = os.path.join(xdg.BaseDirectory.save_data_path(APP_DIR),
-                                 HighScores.FILE)
-        with open(file_name, 'w', newline='', encoding='utf-8') as f:
+        filename = os.path.join(xdg.BaseDirectory.save_data_path(APP_DIR),
+                                HighScores.FILE)
+        with open(filename, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow(Score.headers())
             writer.writerows(score.values() for score in self.scores)
 
 
 class SameBallApp(object):
+
+    CONFIG_FILE = 'same-ball.conf'
 
     # In order not to waste CPU resizing images while the user is manually
     # resizing the window, we delay the actual resize until the user activity
@@ -611,14 +614,10 @@ class SameBallApp(object):
     MAX_CPU_LOAD = 0.5
 
     def __init__(self):
+        self.load_config()
         self.high_scores = HighScores()
         self.init_ui()
         Ball.load_images()
-
-        self.num_colors = 4
-        self.num_columns = 10
-        self.num_rows = 7
-
         self.on_game_new()
 
     def init_ui(self):
@@ -628,6 +627,10 @@ class SameBallApp(object):
         self.builder.connect_signals(self)
 
         self.window = self.builder.get_object('main_window')
+        self.window.resize(self.config.as_int('window_width'),
+                           self.config.as_int('window_height'))
+        self.window.move(self.config.as_int('window_x'),
+                         self.config.as_int('window_y'))
         self.window.show_all()
         self.window.connect('delete-event', self.on_quit)
 
@@ -667,6 +670,20 @@ class SameBallApp(object):
         self.game_area.connect('motion-notify-event', self.on_mouse_move)
         self.game_area.connect('leave-notify-event', self.on_mouse_leave)
         self.game_area.connect('button-press-event', self.on_mouse_click)
+
+        self.disable_menu_clicks = True
+
+        def activate_menu_item(item_id):
+            menu_item = self.builder.get_object(item_id)
+            if menu_item:
+                menu_item.set_active(True)
+
+        activate_menu_item('colors_{}_menu_item'.format(
+            self.config['num_colors']))
+        activate_menu_item('board_{}x{}_menu_item'.format(
+            self.config['num_columns'], self.config['num_rows']))
+
+        self.disable_menu_clicks = False
 
     def run(self):
         self.board.show()
@@ -840,46 +857,99 @@ class SameBallApp(object):
         return widget.hide_on_delete()
 
     def on_quit(self, widget, data=None):
+        self.save_config()
         Gtk.main_quit()
 
     def on_game_new(self, widget=None, data=None):
         self.game_over = False
-        self.board = Board(self.screen, self.num_colors, self.num_columns, self.num_rows)
+        self.board = Board(self.screen, self.config)
         self.show_score()
         self.draw()
 
-    def on_game_size(self, widget, data=None):
+    def on_board_size(self, widget, data=None):
+        if self.disable_menu_clicks:
+            return
+
         if not widget.get_active():
             return
 
         name = Gtk.Buildable.get_name(widget)
-        if name == 'small_menu_item':
-            self.num_columns = 6
-            self.num_rows = 5
-        elif name == 'medium_menu_item':
-            self.num_columns = 10
-            self.num_rows = 7
-        elif name == 'large_menu_item':
-            self.num_columns = 15
-            self.num_rows = 10
+        if name == 'board_6x5_menu_item':
+            self.config['num_columns'] = 6
+            self.config['num_rows'] = 5
+        elif name == 'board_10x7_menu_item':
+            self.config['num_columns'] = 10
+            self.config['num_rows'] = 7
+        elif name == 'board_15x10_menu_item':
+            self.config['num_columns'] = 15
+            self.config['num_rows'] = 10
+        self.save_config()
 
         self.on_game_new()
 
     def on_game_difficulty(self, widget, data=None):
+        if self.disable_menu_clicks:
+            return
+
         if not widget.get_active():
             return
 
         name = Gtk.Buildable.get_name(widget)
-        if name == 'colors3_menu_item':
-            self.num_colors = 3
-        elif name == 'colors4_menu_item':
-            self.num_colors = 4
-        elif name == 'colors5_menu_item':
-            self.num_colors = 5
-        elif name == 'colors6_menu_item':
-            self.num_colors = 6
+        if name == 'colors_3_menu_item':
+            self.config['num_colors'] = 3
+        elif name == 'colors_4_menu_item':
+            self.config['num_colors'] = 4
+        elif name == 'colors_5_menu_item':
+            self.config['num_colors'] = 5
+        elif name == 'colors_6_menu_item':
+            self.config['num_colors'] = 6
+        self.save_config()
 
         self.on_game_new()
+
+    def load_config(self):
+        for path in xdg.BaseDirectory.load_config_paths(APP_DIR):
+            try:
+                self.config = configobj.ConfigObj(
+                        os.path.join(path, SameBallApp.CONFIG_FILE),
+                        encoding='utf-8', file_error=True)
+                return
+            except IOError:
+                continue
+
+        # Couldn't find a config file, load the defaults.
+        defs = '''# same-ball.conf -- config file for Same Ball.
+#
+# This file gets overwritten when the game exits.
+# So don't edit it with the game open, or you'll lose your changes.
+
+# How many unique colors the balls should have.
+num_colors = 4
+
+# The size of the board.
+num_columns = 10
+num_rows = 7
+
+# The size and position of the game window, in pixels.
+window_width = 600
+window_height = 500
+window_x = 10
+window_y = 10
+'''
+        self.config = configobj.ConfigObj(defs.splitlines(), encoding='utf-8')
+
+    def save_config(self):
+        (w, h) = self.window.get_size()
+        (x, y) = self.window.get_position()
+        self.config['window_width'] = w
+        self.config['window_height'] = h
+        self.config['window_x'] = x
+        self.config['window_y'] = y
+
+        self.config.filename = os.path.join(
+                xdg.BaseDirectory.save_config_path(APP_DIR),
+                SameBallApp.CONFIG_FILE)
+        self.config.write()
 
 
 if __name__ == '__main__':

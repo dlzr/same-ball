@@ -49,39 +49,38 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="GtkRadioMenuItem" id="small_menu_item">
+                              <object class="GtkRadioMenuItem" id="board_6x5_menu_item">
                                 <property name="use_action_appearance">False</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Small</property>
                                 <property name="use_underline">True</property>
                                 <property name="draw_as_radio">True</property>
-                                <signal name="toggled" handler="on_game_size" swapped="no"/>
+                                <signal name="toggled" handler="on_board_size" swapped="no"/>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkRadioMenuItem" id="medium_menu_item">
+                              <object class="GtkRadioMenuItem" id="board_10x7_menu_item">
                                 <property name="use_action_appearance">False</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Medium</property>
                                 <property name="use_underline">True</property>
-                                <property name="active">True</property>
                                 <property name="draw_as_radio">True</property>
-                                <property name="group">small_menu_item</property>
-                                <signal name="toggled" handler="on_game_size" swapped="no"/>
+                                <property name="group">board_6x5_menu_item</property>
+                                <signal name="toggled" handler="on_board_size" swapped="no"/>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkRadioMenuItem" id="large_menu_item">
+                              <object class="GtkRadioMenuItem" id="board_15x10_menu_item">
                                 <property name="use_action_appearance">False</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Large</property>
                                 <property name="use_underline">True</property>
                                 <property name="draw_as_radio">True</property>
-                                <property name="group">small_menu_item</property>
-                                <signal name="toggled" handler="on_game_size" swapped="no"/>
+                                <property name="group">board_6x5_menu_item</property>
+                                <signal name="toggled" handler="on_board_size" swapped="no"/>
                               </object>
                             </child>
                           </object>
@@ -100,7 +99,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="GtkRadioMenuItem" id="colors3_menu_item">
+                              <object class="GtkRadioMenuItem" id="colors_3_menu_item">
                                 <property name="use_action_appearance">False</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
@@ -111,39 +110,38 @@
                               </object>
                             </child>
                             <child>
-                              <object class="GtkRadioMenuItem" id="colors4_menu_item">
+                              <object class="GtkRadioMenuItem" id="colors_4_menu_item">
                                 <property name="use_action_appearance">False</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">_4 Colors</property>
                                 <property name="use_underline">True</property>
-                                <property name="active">True</property>
                                 <property name="draw_as_radio">True</property>
-                                <property name="group">colors3_menu_item</property>
+                                <property name="group">colors_3_menu_item</property>
                                 <signal name="toggled" handler="on_game_difficulty" swapped="no"/>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkRadioMenuItem" id="colors5_menu_item">
+                              <object class="GtkRadioMenuItem" id="colors_5_menu_item">
                                 <property name="use_action_appearance">False</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">_5 Colors</property>
                                 <property name="use_underline">True</property>
                                 <property name="draw_as_radio">True</property>
-                                <property name="group">colors3_menu_item</property>
+                                <property name="group">colors_3_menu_item</property>
                                 <signal name="toggled" handler="on_game_difficulty" swapped="no"/>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkRadioMenuItem" id="colors6_menu_item">
+                              <object class="GtkRadioMenuItem" id="colors_6_menu_item">
                                 <property name="use_action_appearance">False</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">_6 Colors</property>
                                 <property name="use_underline">True</property>
                                 <property name="draw_as_radio">True</property>
-                                <property name="group">colors3_menu_item</property>
+                                <property name="group">colors_3_menu_item</property>
                                 <signal name="toggled" handler="on_game_difficulty" swapped="no"/>
                               </object>
                             </child>
@@ -388,7 +386,7 @@
     <property name="type_hint">dialog</property>
     <property name="transient_for">main_window</property>
     <property name="program_name">Same Ball</property>
-    <property name="version">0.9.3</property>
+    <property name="version">0.9.4</property>
     <property name="copyright">© 2015 David Lazăr</property>
     <property name="comments" translatable="yes">Can you clear the board?</property>
     <property name="license">Copyright 2015 David Lazăr

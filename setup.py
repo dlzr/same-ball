@@ -4,7 +4,7 @@ from DistUtilsExtra.auto import setup
 
 setup(
     name = 'same-ball',
-    version = '0.9.3',
+    version = '0.9.4',
     author = 'David Lazăr',
     author_email = 'dlazar@gmail.com',
     license = 'Apache License 2.0',

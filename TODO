@@ -1,6 +1,5 @@
 - support loading specific game (game/load)
 - display current game code in status bar
-- i18n support
 - debian packaging
   - file ITP bug
   - add manpage
